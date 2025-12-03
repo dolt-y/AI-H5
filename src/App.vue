@@ -109,23 +109,39 @@ function nextMessageId(): number {
   messageIdSeed.value += 1;
   return messageIdSeed.value;
 }
-function scrollToBottom(targetId?: string) {
-  nextTick(() => {
-    const id = targetId ?? bottomAnchorId;
-    scrollTargetId.value = id;
+async function scrollToBottom(targetId?: string) {
 
-    // 实际执行滚动
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    } else {
-      // 如果没有找到元素，滚动到聊天窗口底部
-      const chatBody = document.querySelector('.chat-body');
-      if (chatBody) {
-        chatBody.scrollTop = chatBody.scrollHeight;
-      }
+  await nextTick();
+
+  const id = targetId ?? bottomAnchorId;
+  scrollTargetId.value = id;
+
+  // 等两帧渲染，尽量避免 CSS 动画或异步内容（高亮、图片）导致高度变化后滚动位置偏移
+  await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+  await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+
+  const element = document.getElementById(id);
+  const chatBody = document.querySelector('.chat-body') as HTMLElement | null;
+
+  // 优先尝试滚动到包含消息的滚动容器，而不是让浏览器选择最近的可滚动祖先
+  if (chatBody) {
+    if (element && chatBody.contains(element)) {
+      // 计算目标元素底部对容器的 scrollTop 值，然后平滑滚动
+      const el = element as HTMLElement;
+      const target = el.offsetTop + el.offsetHeight - chatBody.clientHeight;
+      chatBody.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+      return;
     }
-  });
+
+    // 如果找不到指定元素，直接滚动到容器底部
+    chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: 'smooth' });
+    return;
+  }
+
+  // 兜底：如果没有找到容器，使用默认的 scrollIntoView
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }
 }
 function createAssistantGreeting(): ChatMessage {
   return {
@@ -210,9 +226,10 @@ function streamAssistantReply(userMessage: ChatMessage, originalText: string, se
 
   return new Promise<void>((resolve) => {
     let updateTimer: number | null = null;
+    let hasReceivedFirstChunk = false;
 
     streamFetch({
-      url: 'http://10.3.20.101:3000/api/ai/chat-mock',
+      url: 'http://10.3.20.101:3000/api/ai/chat',
       data: {
         messages: [{ role: 'user', content: originalText }],
         sessionId,
@@ -223,6 +240,12 @@ function streamAssistantReply(userMessage: ChatMessage, originalText: string, se
         console.log('流式请求接收到数据:', chunk);
         const parsedText = chunk;
         if (!parsedText) return;
+
+        // 第一条数据到达时，立即更新状态为 success（隐藏 loading icon）
+        if (!hasReceivedFirstChunk) {
+          hasReceivedFirstChunk = true;
+          assistantMessage.status = 'success';
+        }
 
         // 拼接完整文本（保持markdown格式）
         assistantMessageContent.value += parsedText;
@@ -306,7 +329,7 @@ async function handleNewSession() {
   }
 }
 // 选择历史会话
-function applyHistoryMessages(rawMessages: HistoryMessage[]) {
+async function applyHistoryMessages(rawMessages: HistoryMessage[]) {
   if (!rawMessages.length) {
     initializeConversation();
     return;
@@ -326,11 +349,19 @@ function applyHistoryMessages(rawMessages: HistoryMessage[]) {
 
   messages.value = [...parsedMessages];
   console.log(messages.value);
-  // conversationStartedAt.value = parsedMessages[0].timestamp;
-  // lastUserMessage.value = [...parsedMessages].reverse().find((msg) => msg.role === 'user') ?? null;
-  // isAssistantTyping.value = false;
-  // inputValue.value = '';
-  // scrollToBottom();
+  // 等待 DOM 更新并再等几帧，确保 markdown/highlight/image 等渲染完成
+  await nextTick();
+  await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+  await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+
+  // 立即定位到底部（使用非平滑定位避免动画导致的错位）
+  const chatBody = document.querySelector('.chat-body') as HTMLElement | null;
+  if (chatBody) {
+    chatBody.scrollTop = chatBody.scrollHeight;
+  } else {
+    // 兜底：调用现有的滚动函数
+    scrollToBottom();
+  }
 }
 // 处理重新生成
 function handleRegenerate(messageId: number) {
@@ -338,7 +369,6 @@ function handleRegenerate(messageId: number) {
   const assistantMsgIndex = messages.value.findIndex(m => m.id === messageId);
   if (assistantMsgIndex === -1) return;
 
-  const assistantMsg = messages.value[assistantMsgIndex];
   // 找到之前的用户消息
   const userMsgIndex = assistantMsgIndex - 1;
   if (userMsgIndex < 0 || messages.value[userMsgIndex].role !== 'user') return;
@@ -403,10 +433,6 @@ async function handleSelectSession(session: Session) {
     applyHistoryMessages(historyMessages);
     sessionId.value = typeof session.id === 'string' ? session.id : Number(session.id);
     historySessionsVisible.value = false;
-    // 滚动到底部
-    nextTick(() => {
-      scrollToBottom();
-    });
   } catch (error) {
     console.error('加载历史会话失败', error);
   }
@@ -462,7 +488,7 @@ async function handleSelectSession(session: Session) {
   }
 
   .chat-body {
-    height: 65vh;
+    height: 70vh;
     // width: 30rem;
     width: 95vw;
     overflow-y: auto;

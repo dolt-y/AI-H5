@@ -14,7 +14,12 @@
 
             <div class="message-bubble">
                 <div v-if="message.type === 'text'" class="message-content markdown-content">
-                    <div v-html="renderedHtml" class="markdown-content"></div>
+                    <!-- AI消息 pending 状态下显示 thinking loading -->
+                    <div v-if="message.role === 'assistant' && message.status === 'pending'" class="thinking-indicator">
+                        <img src="../assets/thinking-icon.svg" alt="思考中" class="thinking-icon" />
+                        <span class="thinking-text">思考中</span>
+                    </div>
+                    <div v-else v-html="renderedHtml" class="markdown-content"></div>
                 </div>
                 <div v-else-if="message.type === 'image'" class="message-image" @click="predivImage(message.content)">
                     <image :src="message.content" mode="aspectFill"></image>
@@ -387,13 +392,13 @@ const statusClass = computed(() => props.message.status || 'success');
         line-height: 1.8;
         color: inherit;
 
-        :deep(p) {
-            // margin-bottom: 16px;
+        // :deep(p) {
+        //     margin-bottom: 16px;
 
-            // &:last-child {
-            //     margin-bottom: 0;
-            // }
-        }
+        //     &:last-child {
+        //         margin-bottom: 0;
+        //     }
+        // }
 
         // :deep(code) {
         //     font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
@@ -459,6 +464,26 @@ const statusClass = computed(() => props.message.status || 'success');
             text-align: left;
         }
 
+    }
+}
+
+.thinking-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 1rem 0;
+
+    .thinking-icon {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+    }
+
+    .thinking-text {
+        font-size: 0.95rem;
+        letter-spacing: 0.5px;
+        color: var(--color-text-secondary);
+        font-weight: 400;
     }
 }
 
