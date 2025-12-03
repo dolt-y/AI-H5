@@ -1,10 +1,22 @@
 <!-- 输入框组件 -->
 <template>
     <div class="input-wrapper">
-
         <div class="input-toolbar">
             <div class="toolbar-right">
-                <!-- 模型选择器 -->
+                <div class="capsule" @click="onNewSession">
+                    <img src="../assets/add-outline.svg" alt="新建会话">
+                    <span class="capsule-text">新建会话</span>
+                </div>
+                <div class="capsule" @click="handleImageUpload">
+                    <img src="../assets/image-outline.svg" alt="插入图片">
+                    <span class="capsule-text">插入图片</span>
+                </div>
+                <div class="capsule" @click="onViewHistory">
+                    <img src="../assets/chatbubble-outline.svg" alt="历史会话">
+                    <span class="capsule-text">{{ '历史会话' }}</span>
+                </div>
+            </div>
+            <div class="toolbar-left">
                 <div class="model-selector" v-if="showModelSelector">
                     <div class="model-dropdown" @click.stop="toggleModelDropdown"
                         :class="{ 'dropdown-open': isModelDropdownOpen }">
@@ -18,25 +30,6 @@
                             {{ model.text }}
                         </div>
                     </div>
-                </div>
-                <!-- 设置按钮 -->
-                <div class="capsule settings-btn" @click="onSettings">
-                    <img src="../assets/settings-icon.svg" alt="设置">
-                    <span class="capsule-text">设置</span>
-                </div>
-            </div>
-            <div class="toolbar-left">
-                <div class="capsule" @click="onNewSession">
-                    <img src="../assets/add-outline.svg" alt="新建会话">
-                    <span class="capsule-text">新建会话</span>
-                </div>
-                <div class="capsule" @click="handleImageUpload">
-                    <img src="../assets/image-outline.svg" alt="插入图片">
-                    <span class="capsule-text">插入图片</span>
-                </div>
-                <div class="capsule" @click="onViewHistory">
-                    <img src="../assets/chatbubble-outline.svg" alt="历史会话">
-                    <span class="capsule-text">{{ '历史会话' }}</span>
                 </div>
             </div>
         </div>
@@ -78,14 +71,13 @@ const props = defineProps({
     },
     selectedModel: {
         type: String,
-        default: 'gpt-3.5-turbo'
+        default: 'deepseek-chat'
     },
     modelOptions: {
         type: Array as () => Array<{ value: string; text: string }>,
         default: () => [
-            { value: 'gpt-3.5-turbo', text: 'GPT-3.5' },
-            { value: 'gpt-4', text: 'GPT-4' },
-            { value: 'gpt-4-turbo', text: 'GPT-4 Turbo' }
+            { value: "deepseek-chat", text: "DeepSeek-快速问答" },
+            { value: 'deepseek-reasoner', text: "DeepSeek-深度思考" }
         ]
     },
     showModelSelector: {
@@ -343,7 +335,6 @@ onUnmounted(() => {
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        // padding: 1rem 1.5rem;
         padding: 0.4rem 0.4rem;
         border-radius: 0.5rem;
         background: var(--color-bg-soft);

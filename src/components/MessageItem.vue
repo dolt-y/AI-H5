@@ -7,14 +7,14 @@
         </div>
         <div class="message-wrapper">
             <div class="message-header">
-                <div v-if="message.role === 'assistant'" class="message-name">小梦</div>
+                <div v-if="message.role === 'assistant'" class="message-name">喜多川海梦</div>
                 <div v-else class="message-name">{{ userInfo.nickname }}</div>
                 <text class="message-time">{{ formatTime(message.timestamp) }}</text>
             </div>
 
             <div class="message-bubble">
                 <div v-if="message.type === 'text'" class="message-content markdown-content">
-                    <div v-html="htmlContent" class="markdown-content"></div>
+                    <div v-html="renderedHtml" class="markdown-content"></div>
                 </div>
                 <div v-else-if="message.type === 'image'" class="message-image" @click="predivImage(message.content)">
                     <image :src="message.content" mode="aspectFill"></image>
@@ -50,7 +50,7 @@
     </div>
 </template>
 <script lang="ts" setup>
-import { ref, computed, defineEmits, defineProps, onMounted } from 'vue';
+import { ref, computed, defineEmits, defineProps, watch, onBeforeUnmount } from 'vue';
 import logo from '@/assets/logo1.png';
 import "highlight.js/styles/github.css";
 import { renderMarkdown } from '@/utils/markdown';
@@ -66,10 +66,6 @@ const props = defineProps({
 });
 const isCopied = ref(false);
 const isLiked = ref(false);
-onMounted(() => {
-    console.log('mounted')
-    console.log(props.message.role)
-})
 const emit = defineEmits(['preview-image', 'regenerate', 'quote', 'share', 'like']);
 
 function handleCopy() {
@@ -102,13 +98,8 @@ function formatTime(timestamp: string | number | Date) {
     const minutes = date.getMinutes().toString().padStart(2, '0');
     return `${hours}:${minutes}`;
 }
-function truncateText(text: string, maxLength: number) {
-    if (!text) return '';
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
-}
 
-function previewImage(imageUrl: any) {
+function predivImage(imageUrl: any) {
     emit('preview-image', imageUrl);
 }
 
@@ -117,24 +108,29 @@ function getStatusText(status: string) {
     if (status === 'error') return '发送失败';
     return '已送达';
 }
-// 优化：实时渲染markdown，确保流式输出时能正确显示
-const htmlContent = computed(() => {
-    const content = props.message.content;
-    if (!content) return '';
+const renderedHtml = ref('');
+let latestContent = '';
+let renderFrame: number | null = null;
 
-    // 检查是否已经是完整的HTML（包含HTML标签和结构）
-    // 简单的检查：如果包含完整的HTML标签结构，可能是已经渲染过的
-    const hasCompleteHtml = /<p>|<div>|<h[1-6]>|<ul>|<ol>|<blockquote>|<pre>/i.test(content);
-    
-    // 如果已经有完整的HTML结构，直接返回（可能是历史消息）
-    if (hasCompleteHtml && content.trim().startsWith('<')) {
-        return content;
+function scheduleRender() {
+    if (renderFrame !== null) return;
+    renderFrame = requestAnimationFrame(() => {
+        renderFrame = null;
+        renderedHtml.value = renderMarkdown(latestContent);
+    });
+}
+
+watch(() => props.message.content, (newContent) => {
+    latestContent = newContent || '';
+    scheduleRender();
+}, { immediate: true });
+
+onBeforeUnmount(() => {
+    if (renderFrame !== null) {
+        cancelAnimationFrame(renderFrame);
     }
-
-    // 否则始终渲染markdown（包括流式输出时的markdown文本）
-    // 这样确保每次content更新时都会重新渲染
-    return renderMarkdown(content);
 });
+
 const showStatus = computed(() => props.message.role === 'user');
 const statusText = computed(() => getStatusText(props.message.status));
 const statusClass = computed(() => props.message.status || 'success');
@@ -142,14 +138,11 @@ const statusClass = computed(() => props.message.status || 'success');
 <style lang="scss" scoped>
 .message-item {
     display: flex;
-    // gap: 24px;
     gap: 0.5rem;
     padding: 1rem 0;
     animation: messageSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 
     .avatar {
-        // width: 80px;
-        // height: 80px;
         width: 3rem;
         height: 3rem;
         border-radius: 50%;
@@ -177,7 +170,6 @@ const statusClass = computed(() => props.message.status || 'success');
         display: flex;
         align-items: center;
         gap: 1rem;
-        // justify-content: space-between;
         padding: 0 4px;
 
         .message-name {
@@ -187,7 +179,6 @@ const statusClass = computed(() => props.message.status || 'success');
         }
 
         .message-time {
-            // font-size: 24px;
             color: rgba(0, 0, 0, 0.45);
             letter-spacing: 0.3px;
         }
@@ -198,19 +189,14 @@ const statusClass = computed(() => props.message.status || 'success');
         justify-items: center;
         align-items: center;
         justify-content: center;
-        // padding: 24px 28px;
         padding: 0rem 1rem;
         border-radius: 20px 20px 20px 4px;
         word-wrap: break-word;
         word-break: break-word;
         white-space: normal;
-        // line-height: 14px;
-        // line-height: 1.7;
-        // font-size: 28px;
-        // font-size: 1.2rem;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         transition: transform 0.2s ease, box-shadow 0.2s ease;
-        // overflow-x: auto;
+        overflow-x: auto;
 
         &:active {
             transform: translateY(2px);
@@ -469,7 +455,7 @@ const statusClass = computed(() => props.message.status || 'success');
 
         :deep(td) {
             border: 1px solid #e2e8f0;
-        //    padding: 0.1rem;
+            //    padding: 0.1rem;
             text-align: left;
         }
 

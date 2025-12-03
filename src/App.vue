@@ -11,7 +11,7 @@
     <div class="chat-body">
       <div class="message-scroll">
         <div class="message-feed">
-          <div class="welcome-card">
+          <div v-if="messages.length <= 1" class="welcome-card">
             <span class="welcome-title">准备好开始了吗？</span>
             <p class="welcome-body">
               输入你的目标、受众和期望格式，我会帮你拆解任务并给出高质量输出建议。
@@ -31,8 +31,8 @@
     <!--输入框-->
     <div class="composer-container">
       <InputArea v-model="inputValue" :is-recording="isRecording" :recording-duration="recordingDuration"
-        :selected-model="selectedModel" :model-options="modelOptions"
-        @send-message="handleSendMessage" @view-history="handleViewHistory" @new-session="handleNewSession"
+        :selected-model="selectedModel" :model-options="modelOptions" @send-message="handleSendMessage"
+        @view-history="handleViewHistory" @new-session="handleNewSession"
         @update:selected-model="selectedModel = $event" @start-recording="handleStartRecording"
         @stop-recording="handleStopRecording" @settings="handleSettings" />
     </div>
@@ -70,11 +70,13 @@ const lastUserMessage = ref<ChatMessage | null>(null);
 const assistantMessageContent = ref(''); // 用于流式文本拼接
 
 // 模型选择
-const selectedModel = ref<string>('gpt-3.5-turbo');
+const selectedModel = ref<string>('deepseek-chat');
 const modelOptions = ref<ModelOption[]>([
-  { value: 'gpt-3.5-turbo', text: 'GPT-3.5' },
-  { value: 'gpt-4', text: 'GPT-4' },
-  { value: 'gpt-4-turbo', text: 'GPT-4 Turbo' }
+  // { value: 'gpt-3.5-turbo', text: 'GPT-3.5' },
+  // { value: 'gpt-4', text: 'GPT-4' },
+  // { value: 'gpt-4-turbo', text: 'GPT-4 Turbo' }
+  { value: "deepseek-chat", text: "快速问答" },
+  { value: 'deepseek-reasoner', text: "深度思考" }
 ]);
 
 const userInfo = ref<user>({
@@ -88,8 +90,6 @@ onMounted(() => {
   localStorage.setItem('token', token.value);
   userInfo.value.nickname = getQueryParam('nickname');
   userInfo.value.avatarUrl = getQueryParam('avatarUrl');
-  // localStorage.setItem('userInfo', JSON.stringify(userInfo.value))
-  // console.log(localStorage.getItem('token'), localStorage.getItem('userInfo'));
 })
 function getQueryParam(name: string) {
   const params = new URLSearchParams(window.location.search);
@@ -113,7 +113,7 @@ function scrollToBottom(targetId?: string) {
   nextTick(() => {
     const id = targetId ?? bottomAnchorId;
     scrollTargetId.value = id;
-    
+
     // 实际执行滚动
     const element = document.getElementById(id);
     if (element) {
@@ -162,16 +162,17 @@ async function handleSendMessage(rawContent?: string) {
   inputValue.value = '';
   scrollToBottom(`message-${userMessage.id}`);
   let id = sessionId?.value;
-  
+
   // 更新用户消息状态为成功（消息已发送）
   userMessage.status = 'success';
   const userIndex = messages.value.findIndex(m => m.id === userMessage.id);
   if (userIndex !== -1) {
     messages.value[userIndex] = { ...userMessage };
   }
-  
+
   await streamAssistantReply(userMessage, content, id);
 }
+
 function streamAssistantReply(userMessage: ChatMessage, originalText: string, sessionId: string | number | undefined) {
   isAssistantTyping.value = true;
 
@@ -194,11 +195,24 @@ function streamAssistantReply(userMessage: ChatMessage, originalText: string, se
 
   assistantMessageContent.value = '';
 
+  let renderFrame: number | null = null;
+  const scheduleRenderUpdate = () => {
+    if (renderFrame !== null) return;
+    renderFrame = requestAnimationFrame(() => {
+      renderFrame = null;
+      assistantMessage.content = renderMarkdown(assistantMessageContent.value);
+      const index = messages.value.findIndex(m => m.id === assistantMessage.id);
+      if (index !== -1) {
+        messages.value[index] = { ...assistantMessage };
+      }
+    });
+  };
+
   return new Promise<void>((resolve) => {
     let updateTimer: number | null = null;
-    
+
     streamFetch({
-      url: 'http://localhost:3000/api/ai/chat',
+      url: 'http://10.3.20.101:3000/api/ai/chat-mock',
       data: {
         messages: [{ role: 'user', content: originalText }],
         sessionId,
@@ -206,38 +220,35 @@ function streamAssistantReply(userMessage: ChatMessage, originalText: string, se
         model: selectedModel.value,
       },
       onMessage(chunk: string) {
-        // 拼接完整文本（保持markdown格式）
-        assistantMessageContent.value += chunk;
+        console.log('流式请求接收到数据:', chunk);
+        const parsedText = chunk;
+        if (!parsedText) return;
 
-        // 立即更新，不使用防抖，确保实时渲染
-        const index = messages.value.findIndex(m => m.id === assistantMessage.id);
-        if (index !== -1) {
-          // 直接保存markdown文本，让MessageItem组件的computed属性来实时渲染
-          assistantMessage.content = assistantMessageContent.value;
-          // 使用Vue的响应式更新
-          messages.value[index] = { ...assistantMessage };
-          
-          // 使用nextTick确保DOM更新后再滚动
-          nextTick(() => {
-            scrollToBottom(`message-${assistantMessage.id}`);
-          });
-        }
+        // 拼接完整文本（保持markdown格式）
+        assistantMessageContent.value += parsedText;
+
+        assistantMessage.content = assistantMessageContent.value;
+        scheduleRenderUpdate();
+
+        nextTick(() => {
+          scrollToBottom(`message-${assistantMessage.id}`);
+        });
       },
       onDone() {
         // 确保最后一次更新
         if (updateTimer) {
           clearTimeout(updateTimer);
         }
-        
+
         // 保存markdown文本，让computed属性来渲染
         assistantMessage.content = assistantMessageContent.value;
         assistantMessage.status = 'success';
-        
+
         const index = messages.value.findIndex(m => m.id === assistantMessage.id);
         if (index !== -1) {
           messages.value[index] = { ...assistantMessage };
         }
-        
+
         isAssistantTyping.value = false;
         scrollToBottom(`message-${assistantMessage.id}`);
         resolve();
@@ -270,14 +281,14 @@ async function handleNewSession() {
   if (isAssistantTyping.value) {
     return;
   }
-  
+
   try {
     // 创建新会话
-    const res: any = await post('http://localhost:3000/api/ai/sessions', {
+    const res: any = await post('http://10.3.20.101:3000/api/ai/sessions', {
       title: '新会话',
       summary: ''
     });
-    
+
     if (res?.session?.id) {
       sessionId.value = res.session.id;
       initializeConversation();
@@ -307,6 +318,7 @@ function applyHistoryMessages(rawMessages: HistoryMessage[]) {
     role: item.role,
     type: 'text' as const,
     content: item.content,
+    html: renderMarkdown(item.content || ''),
     status: 'success' as const,
     timestamp: item.created_at ? new Date(item.created_at).getTime() : Date.now(),
     quoted: null
@@ -325,17 +337,17 @@ function handleRegenerate(messageId: number) {
   // 找到该消息和它之前的用户消息
   const assistantMsgIndex = messages.value.findIndex(m => m.id === messageId);
   if (assistantMsgIndex === -1) return;
-  
+
   const assistantMsg = messages.value[assistantMsgIndex];
   // 找到之前的用户消息
   const userMsgIndex = assistantMsgIndex - 1;
   if (userMsgIndex < 0 || messages.value[userMsgIndex].role !== 'user') return;
-  
+
   const userMsg = messages.value[userMsgIndex];
-  
+
   // 删除当前助手消息
   messages.value.splice(assistantMsgIndex, 1);
-  
+
   // 重新生成回复
   streamAssistantReply(userMsg, userMsg.content, sessionId.value);
 }
@@ -386,7 +398,7 @@ async function handleSelectSession(session: Session) {
   }
 
   try {
-    const res: any = await get(`http://localhost:3000/api/ai/sessions/${session.id}/messages`);
+    const res: any = await get(`http://10.3.20.101:3000/api/ai/sessions/${session.id}/messages`);
     const historyMessages = Array.isArray(res?.messages) ? res.messages : [];
     applyHistoryMessages(historyMessages);
     sessionId.value = typeof session.id === 'string' ? session.id : Number(session.id);

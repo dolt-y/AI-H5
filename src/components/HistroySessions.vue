@@ -135,7 +135,7 @@ async function fetchSessions() {
     loading.value = true;
     errorMessage.value = '';
     try {
-        const res: any = await get('http://localhost:3000/api/ai/sessions');
+        const res: any = await get('http://10.3.20.101:3000/api/ai/sessions');
         sessions.value = res?.sessions ?? [];
     } catch (err) {
         console.error('获取会话失败', err);
@@ -151,7 +151,7 @@ async function deleteSession() {
     deletingId.value = sessionId;
 
     try {
-        await post(`http://localhost:3000/api/ai/sessions/${sessionId}/delete`, "POST",);
+        await post(`http://10.3.20.101:3000/api/ai/sessions/${sessionId}/delete`);
         sessions.value = sessions.value.filter(s => s.id !== sessionId);
         emit('delete-session', sessionId);
 
