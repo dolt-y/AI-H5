@@ -154,19 +154,8 @@ async function deleteSession() {
         await post(`http://10.3.20.101:3000/api/ai/sessions/${sessionId}/delete`);
         sessions.value = sessions.value.filter(s => s.id !== sessionId);
         emit('delete-session', sessionId);
-
-        // uni.showToast({
-        //     title: '删除成功',
-        //     icon: 'success',
-        //     duration: 2000
-        // });
     } catch (err) {
         console.error('删除会话失败', err);
-        // uni.showToast({
-        //     title: '删除失败',
-        //     icon: 'none',
-        //     duration: 2000
-        // });
     } finally {
         deletingId.value = null;
         showDeleteConfirm.value = false;

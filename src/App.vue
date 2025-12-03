@@ -196,7 +196,7 @@ async function handleSendMessage(rawContent?: string) {
  * @param originalText 用户发送的原始文本
  * @param sessionId 会话ID
  */
-function streamAssistantReply(userMessage: ChatMessage, originalText: string, sessionId: string | number | undefined) {
+function streamAssistantReply(userMessage: ChatMessage, originalText: string, sessionIdValue: string | number | undefined) {
   isAssistantTyping.value = true;
 
   const assistantMessage: ChatMessage = {
@@ -240,11 +240,11 @@ function streamAssistantReply(userMessage: ChatMessage, originalText: string, se
       url: 'http://10.3.20.101:3000/api/ai/chat',
       data: {
         messages: [{ role: 'user', content: originalText }],
-        sessionId,
+        sessionId: sessionIdValue,
         stream: true,
         model: selectedModel.value,
       },
-      onMessage(chunk: string) {
+      onMessage: (chunk: string) => {
         console.log('流式请求接收到数据:', chunk);
         const parsedText = chunk;
         if (!parsedText) return;
@@ -261,7 +261,8 @@ function streamAssistantReply(userMessage: ChatMessage, originalText: string, se
           scrollToBottom(`message-${assistantMessage.id}`);
         });
       },
-      onDone() {
+      onDone: (id: string | number | undefined) => {
+        sessionId.value = id;
         assistantMessage.content = assistantMessageContent.value;
         assistantMessage.status = 'success';
 
@@ -274,7 +275,7 @@ function streamAssistantReply(userMessage: ChatMessage, originalText: string, se
         scrollToBottom(`message-${assistantMessage.id}`);
         resolve();
       },
-      onError(err: any) {
+      onError: (err: any) => {
         assistantMessage.status = 'error';
         const index = messages.value.findIndex(m => m.id === assistantMessage.id);
         if (index !== -1) {
@@ -293,26 +294,10 @@ async function handleNewSession() {
   if (isAssistantTyping.value) {
     return;
   }
-  try {
-    const res: any = await post('http://10.3.20.101:3000/api/ai/sessions', {
-      title: '新会话',
-      summary: ''
-    });
-
-    if (res?.session?.id) {
-      sessionId.value = res.session.id;
-      initializeConversation();
-      console.log('新会话已创建');
-    } else {
-      sessionId.value = undefined;
-      initializeConversation();
-    }
-  } catch (error) {
-    console.error('创建新会话失败', error);
-    sessionId.value = undefined;
-    initializeConversation();
-  }
+  sessionId.value = undefined;
+  initializeConversation();
 }
+
 // 选择历史会话
 async function applyHistoryMessages(rawMessages: HistoryMessage[]) {
   if (!rawMessages.length) {
