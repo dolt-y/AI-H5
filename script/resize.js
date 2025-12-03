@@ -6,10 +6,8 @@ function setRem() {
     const html = document.documentElement;
     const width = html.clientWidth;
 
-    // 根据宽度计算字体大小
     let fontSize = (width / baseWidth) * 12;
 
-    // 限制最小最大值
     if (fontSize < minFontSize) fontSize = minFontSize;
     if (fontSize > maxFontSize) fontSize = maxFontSize;
 

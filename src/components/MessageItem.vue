@@ -14,7 +14,6 @@
 
             <div class="message-bubble">
                 <div v-if="message.type === 'text'" class="message-content markdown-content">
-                    <!-- AI消息 pending 状态下显示 thinking loading -->
                     <div v-if="message.role === 'assistant' && message.status === 'pending'" class="thinking-indicator">
                         <img src="../assets/thinking-icon.svg" alt="思考中" class="thinking-icon" />
                         <span class="thinking-text">思考中</span>
@@ -25,10 +24,6 @@
                     <image :src="message.content" mode="aspectFill"></image>
                     <div class="image-overlay"></div>
                 </div>
-                <!-- <div v-if="message.quoted" class="quoted-message">
-                    <text class="quoted-label">{{ message.quoted.role === 'assistant' ? '小梦' : '我' }}：</text>
-                    <text>{{ truncateText(message.quoted.content, 50) }}</text>
-                </div> -->
             </div>
             <div class="message-footer">
                 <div class="message-actions"
@@ -55,8 +50,8 @@
     </div>
 </template>
 <script lang="ts" setup>
-import { ref, computed, defineEmits, defineProps, watch, onBeforeUnmount } from 'vue';
-import logo from '@/assets/logo1.png';
+import { ref, computed, watch, onBeforeUnmount } from 'vue';
+import logo from '@/assets/logo.png';
 import "highlight.js/styles/github.css";
 import { renderMarkdown } from '@/utils/markdown';
 const props = defineProps({
@@ -74,7 +69,6 @@ const isLiked = ref(false);
 const emit = defineEmits(['preview-image', 'regenerate', 'quote', 'share', 'like']);
 
 function handleCopy() {
-    // 获取渲染后的文本
     const bubble = document.getElementById(`message-${props.message.id}`);
     if (!bubble) return;
 

@@ -269,7 +269,5 @@ Response: { messages: Array<HistoryMessage> }
 MIT License
 
 ---
-
-**开发团队**: AI 助手应用团队  
 **最后更新**: 2025年12月3日  
 **Repository**: [github.com/dolt-y/AI-H5](https://github.com/dolt-y/AI-H5)

@@ -55,7 +55,7 @@
     </div>
 </template>
 <script lang="ts" setup>
-import { computed, defineEmits, defineProps, ref, watch, onMounted, onUnmounted } from 'vue';
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue';
 const props = defineProps({
     modelValue: {
         type: String,
@@ -85,8 +85,7 @@ const props = defineProps({
         default: true
     }
 });
-// 移除旧的touch事件监听器，现在使用click事件
-// 响应式数据
+
 const inputContent = ref(props.modelValue);
 const isInputFocused = ref(false);
 const emit = defineEmits([
@@ -124,19 +123,6 @@ const onSettings = () => {
 }
 const handleImageUpload = () => {
     if (props.isRecording) return;
-
-    //   uni.chooseImage({
-    //     count: 1,
-    //     sizeType: ['compressed'],
-    //     sourceType: ['album', 'camera'],
-    //     success: (res) => {
-    //       const tempFilePath = res.tempFilePaths[0];
-    //       emit('upload-image', tempFilePath);
-    //     },
-    //     fail: (err) => {
-    //       console.error('选择图片失败:', err);
-    //     }
-    //   });
 }
 const canSend = computed(() => inputContent.value.trim().length > 0 && !props.isRecording);
 // 发送消息
