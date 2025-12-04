@@ -2,6 +2,7 @@ interface StreamOptions {
   url: string;
   data: any;
   onMessage: (chunk: string) => void;
+  onThinking?: (thinking: any) => void; // 新增：处理思考链
   onDone?: (sessionId?: string) => void;
   onError?: (err: any) => void;
 }
@@ -12,6 +13,7 @@ export async function streamFetch({
   url,
   data,
   onMessage,
+  onThinking,
   onDone,
   onError
 }: StreamOptions) {
@@ -34,13 +36,11 @@ export async function streamFetch({
     const processEventBlock = (block: string) => {
       const lines = block.split(/\r?\n/);
       const dataLines: string[] = [];
-
       for (const line of lines) {
         if (line.startsWith('data:')) {
           dataLines.push(line.replace(/^data:\s*/, ''));
         }
       }
-
       if (dataLines.length === 0) return;
       const dataStr = dataLines.join('').trim();
 
@@ -48,20 +48,24 @@ export async function streamFetch({
         const obj = JSON.parse(dataStr);
         if (obj?.type === 'delta' && typeof obj.text === 'string') {
           onMessage(obj.text);
+        } else if (obj?.type === 'thinking') {
+          // thinking 可能是结构化数据：传回给调用者自行处理
+          onThinking?.(obj.thinking);
         } else if (obj?.type === 'done') {
-          // 提取 sessionId 并传递给 onDone
           onDone?.(obj.sessionId);
+        } else {
+          // 非预期结构，作为原始文本处理
+          onMessage(dataStr);
         }
       } catch (e) {
+        // 非 JSON，作为纯文本处理
         onMessage(dataStr);
       }
     };
 
     while (true) {
       const { value, done } = await reader.read();
-      if (value) {
-        buffer += decoder.decode(value, { stream: true });
-      }
+      if (value) buffer += decoder.decode(value, { stream: true });
 
       let idx;
       while ((idx = buffer.indexOf('\n\n')) !== -1) {

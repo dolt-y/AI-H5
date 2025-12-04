@@ -3,6 +3,7 @@ interface ChatMessage {
   role: 'assistant' | 'user';
   type: 'text' | 'image';
   content: string;
+  reasoning_content?: string;
   status?: 'pending' | 'success' | 'error';
   timestamp: number;
   quoted?: {
@@ -33,6 +34,7 @@ type ToastExpose = {
 };
 type HistoryMessage = {
   role: 'assistant' | 'user';
+  reasoning_content?: string;
   content: string;
   created_at?: string;
 };

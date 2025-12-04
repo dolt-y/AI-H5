@@ -217,13 +217,9 @@ function streamAssistantReply(userMessage: ChatMessage, originalText: string, se
     role: 'assistant',
     type: 'text',
     content: '',
+    reasoning_content: '',
     status: 'pending',
     timestamp: Date.now(),
-    quoted: {
-      id: userMessage.id,
-      role: 'user',
-      content: originalText
-    }
   };
 
   messages.value.push(assistantMessage);
@@ -274,6 +270,18 @@ function streamAssistantReply(userMessage: ChatMessage, originalText: string, se
           scrollToBottom(`message-${assistantMessage.id}`);
         });
       },
+      onThinking: (thinking) => {
+        console.log('思考中数据:', thinking);
+        if (!hasReceivedFirstChunk) {
+          hasReceivedFirstChunk = true;
+          assistantMessage.status = 'success';
+        }
+        assistantMessage.reasoning_content += thinking
+        scheduleRenderUpdate();
+        nextTick(() => {
+          scrollToBottom(`message-${assistantMessage.id}`);
+        });
+      },
       onDone: (id: string | number | undefined) => {
         sessionId.value = id;
         assistantMessage.content = assistantMessageContent.value;
@@ -296,6 +304,7 @@ function streamAssistantReply(userMessage: ChatMessage, originalText: string, se
         }
         isAssistantTyping.value = false;
         console.error('流式请求出错:', err);
+
         resolve();
       }
     });
@@ -324,7 +333,7 @@ async function applyHistoryMessages(rawMessages: HistoryMessage[]) {
     role: item.role,
     type: 'text' as const,
     content: item.content,
-    html: renderMarkdown(item.content || ''),
+    reasoning_content: item.reasoning_content,
     status: 'success' as const,
     timestamp: item.created_at ? new Date(item.created_at).getTime() : Date.now(),
     quoted: null

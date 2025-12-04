@@ -11,14 +11,32 @@
                 <div v-else class="message-name">{{ userInfo.nickname }}</div>
                 <text class="message-time">{{ formatTime(message.timestamp) }}</text>
             </div>
-
             <div class="message-bubble">
                 <div v-if="message.type === 'text'" class="message-content markdown-content">
                     <div v-if="message.role === 'assistant' && message.status === 'pending'" class="thinking-indicator">
                         <img src="../assets/thinking-icon.svg" alt="思考中" class="thinking-icon" />
                         <span class="thinking-text">思考中</span>
                     </div>
-                    <div v-else v-html="renderedHtml" class="markdown-content"></div>
+                    <div v-else>
+                        <!-- 推理内容折叠框 -->
+                        <div v-if="message.reasoning_content" class="reasoning-section">
+                            <button class="reasoning-header" @click="toggleReasoningContent">
+                                <svg class="reasoning-icon" :class="{ expanded: !isReasoningExpanded }" width="1rem"
+                                    height="1rem" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                                <span class="reasoning-label">🧠 深度思考</span>
+                                <span class="reasoning-length">{{ reasoningContentPreview }}</span>
+                            </button>
+                            <transition name="expand">
+                                <div v-show="isReasoningExpanded" class="reasoning-content markdown-content">
+                                    <div v-html="renderedReasoningHtml"></div>
+                                </div>
+                            </transition>
+                        </div>
+                        <div v-html="renderedHtml" class="markdown-content"></div>
+                    </div>
                 </div>
                 <div v-else-if="message.type === 'image'" class="message-image" @click="predivImage(message.content)">
                     <image :src="message.content" mode="aspectFill"></image>
@@ -66,21 +84,31 @@ const props = defineProps({
 });
 const isCopied = ref(false);
 const isLiked = ref(false);
+const isReasoningExpanded = ref(true);
 const emit = defineEmits(['preview-image', 'regenerate', 'quote', 'share', 'like']);
 
 function handleCopy() {
-    const bubble = document.getElementById(`message-${props.message.id}`);
-    if (!bubble) return;
-
-    const text = bubble.querySelector('.message-content')?.textContent || '';
+    // 1. 获取文本内容
+    const text = document.getElementById(`message-${props.message.id}`)?.querySelector('.message-content')?.textContent;
     if (!text) return;
 
-    navigator.clipboard.writeText(text)
-        .then(() => {
-            isCopied.value = true;
-            setTimeout(() => isCopied.value = false, 1500);
-        })
-        .catch(err => console.error('复制失败', err));
+    // 2. 创建临时输入框
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    document.body.appendChild(textarea);
+
+    // 3. 选中并复制
+    textarea.select();
+    document.execCommand('copy');
+
+    // 4. 清理临时元素
+    document.body.removeChild(textarea);
+
+    // 5. 更新成功状态
+    if (isCopied) {
+        isCopied.value = true;
+        setTimeout(() => isCopied.value = false, 1500);
+    }
 }
 
 function handleLike() {
@@ -91,6 +119,11 @@ function handleLike() {
 function handleRegenerate() {
     emit('regenerate', props.message.id);
 }
+
+function toggleReasoningContent() {
+    isReasoningExpanded.value = !isReasoningExpanded.value;
+}
+
 function formatTime(timestamp: string | number | Date) {
     const date = new Date(timestamp);
     const hours = date.getHours().toString().padStart(2, '0');
@@ -107,9 +140,13 @@ function getStatusText(status: string) {
     if (status === 'error') return '发送失败';
     return '已送达';
 }
+
 const renderedHtml = ref('');
+const renderedReasoningHtml = ref('');
 let latestContent = '';
+let latestReasoningContent = '';
 let renderFrame: number | null = null;
+let reasoningRenderFrame: number | null = null;
 
 function scheduleRender() {
     if (renderFrame !== null) return;
@@ -119,14 +156,39 @@ function scheduleRender() {
     });
 }
 
+function scheduleReasoningRender() {
+    if (reasoningRenderFrame !== null) return;
+    reasoningRenderFrame = requestAnimationFrame(() => {
+        reasoningRenderFrame = null;
+        renderedReasoningHtml.value = renderMarkdown(latestReasoningContent);
+    });
+}
+
+const reasoningContentPreview = computed(() => {
+    if (!props.message.reasoning_content) return '';
+    const length = props.message.reasoning_content.length;
+    if (length > 1000) return `(${Math.round(length / 100) * 100} 字)`;
+    return `(${length} 字)`;
+});
+
 watch(() => props.message.content, (newContent) => {
     latestContent = newContent || '';
     scheduleRender();
 }, { immediate: true });
 
+watch(() => props.message.reasoning_content, (newReasoningContent) => {
+    latestReasoningContent = newReasoningContent || '';
+    if (newReasoningContent) {
+        scheduleReasoningRender();
+    }
+}, { immediate: true });
+
 onBeforeUnmount(() => {
     if (renderFrame !== null) {
         cancelAnimationFrame(renderFrame);
+    }
+    if (reasoningRenderFrame !== null) {
+        cancelAnimationFrame(reasoningRenderFrame);
     }
 });
 
@@ -141,6 +203,7 @@ const statusClass = computed(() => props.message.status || 'success');
     padding: 1rem 0;
     animation: messageSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 
+    // box-sizing: border-box;
     .avatar {
         width: 3rem;
         height: 3rem;
@@ -461,6 +524,115 @@ const statusClass = computed(() => props.message.status || 'success');
     }
 }
 
+.reasoning-section {
+    margin-left: -1rem;
+    margin-right: -1rem;
+    background: linear-gradient(90deg, rgba(99, 102, 241, 0.05), transparent);
+    border-radius: 0;
+    overflow: hidden;
+
+    .reasoning-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        background: linear-gradient(90deg, rgba(99, 102, 241, 0.1), transparent);
+        border: none;
+        cursor: pointer;
+        width: 100%;
+        transition: all 0.2s ease;
+        color: var(--color-text-primary);
+        font-weight: 600;
+        font-size: 0.9rem;
+
+        &:hover {
+            background: linear-gradient(90deg, rgba(99, 102, 241, 0.15), transparent);
+        }
+
+        .reasoning-icon {
+            width: 1rem;
+            height: 1rem;
+            flex-shrink: 0;
+            color: var(--color-accent);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+            &.expanded {
+                transform: rotate(180deg);
+            }
+        }
+
+        .reasoning-label {
+            flex: 1;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .reasoning-length {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            font-weight: 400;
+        }
+    }
+
+    .reasoning-content {
+        padding: 0rem 0 0 0.2rem;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        background: rgba(99, 102, 241, 0.02);
+        line-height: 1.6;
+        color: var(--color-text-secondary);
+
+        :deep(p) {
+            font-size: 0.7rem;
+        }
+
+        .markdown-content {
+
+            :deep(p) {
+                margin: 0.4rem 0;
+
+                &:last-child {
+                    margin-bottom: 0;
+                }
+            }
+
+            :deep(pre) {
+                background: rgba(30, 41, 59, 0.8);
+                padding: 0.75rem;
+                font-size: 0.8rem;
+                margin: 0.5rem 0;
+                border-radius: 0.3rem;
+            }
+
+            :deep(code) {
+                background: rgba(99, 102, 241, 0.1);
+                padding: 0.1rem 0.3rem;
+                border-radius: 0.2rem;
+                font-size: 0.85rem;
+            }
+
+            :deep(blockquote) {
+                border-left-color: rgba(99, 102, 241, 0.3);
+                background: rgba(99, 102, 241, 0.05);
+                padding: 0.5rem 0.75rem;
+                margin: 0.5rem 0;
+            }
+
+            :deep(ul),
+            :deep(ol) {
+                margin: 0.5rem 0;
+                padding-left: 1.5rem;
+            }
+
+            :deep(li) {
+                margin: 0.3rem 0;
+            }
+        }
+    }
+}
+
 .thinking-indicator {
     display: flex;
     align-items: center;
@@ -539,5 +711,27 @@ const statusClass = computed(() => props.message.status || 'success');
     to {
         transform: rotate(360deg);
     }
+}
+
+.expand-enter-active,
+.expand-leave-active {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.expand-enter-from {
+    opacity: 0;
+    max-height: 0;
+}
+
+.expand-leave-to {
+    opacity: 0;
+    max-height: 0;
+}
+
+.expand-enter-to,
+.expand-leave-from {
+    opacity: 1;
+    max-height: 500px;
 }
 </style>
