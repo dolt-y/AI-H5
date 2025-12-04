@@ -7,6 +7,8 @@
       <div class="bg-glow-right"></div>
       <div class="bg-noise"></div>
     </div>
+    <!--设置面板-->
+    <!-- <SettingsPanel @update-settings="handleSettingsUpdate" /> -->
     <!--聊天窗口-->
     <div class="chat-body">
       <div class="message-scroll">
@@ -38,13 +40,14 @@
     </div>
     <!--历史会话-->
     <HistroySessions :visible="historySessionsVisible" :active-session-id="sessionId"
-      @close="historySessionsVisible = false" @select-session="handleSelectSession" />
+      @close="historySessionsVisible = false" @delete-session="handelDelete" @select-session="handleSelectSession" />
   </div>
 </template>
 <script lang="ts" setup>
 import InputArea from '@/components/InputArea.vue';
 import MessageItem from '@/components/MessageItem.vue';
 import HistroySessions from '@/components/HistroySessions.vue';
+import SettingsPanel from '@/components/SettingsPanel.vue';
 import type { ChatMessage, Session, ModelOption, user, HistoryMessage } from '@/utils/type';
 import { nextTick, onMounted, ref } from 'vue';
 import { get, post } from '@/utils/request';
@@ -54,13 +57,11 @@ import { renderMarkdown } from '@/utils/markdown';
 const messages = ref<ChatMessage[]>([]);// 消息列表
 const messageIdSeed = ref<number>(0);// 消息ID
 const bottomAnchorId = 'chat-bottom-anchor';
-const typingAnchorId = 'chat-typing-anchor';
 const isAssistantTyping = ref<boolean>(false);// AI正在输入
 
 const isRecording = ref<boolean>(false);// 是否正在录音
 const recordingDuration = ref<number>(0);// 录音时长
 const inputValue = ref<string>('');// 输入框内容
-const recordingCancel = ref<boolean>(false);// 录音是否取消
 const conversationStartedAt = ref<number>(Date.now());// 会话开始时间
 const scrollTargetId = ref<string>('');// 滚动目标ID
 const sessionId = ref<number | string>();
@@ -83,6 +84,18 @@ const userInfo = ref<user>({
   avatarUrl: ''
 });
 const token = ref<string>();
+
+const handleSettingsUpdate = (settings: any) => {
+  // 处理设置更新
+  if (settings.nickname) {
+    userInfo.value.nickname = settings.nickname;
+  }
+  if (settings.defaultModel) {
+    selectedModel.value = settings.defaultModel;
+  }
+  console.log('设置已更新:', settings);
+};
+
 onMounted(() => {
   token.value = getQueryParam('token');
   localStorage.setItem('token', token.value);
@@ -401,7 +414,13 @@ function handleSettings() {
   console.log('打开设置');
   // 这里可以添加设置弹窗
 }
-
+function handelDelete(sessionIdValue: number | string) {
+  // 如果删除的是当前会话，重置聊天
+  if (sessionId.value === sessionIdValue) {
+    initializeConversation();
+    sessionId.value = undefined;
+  }
+}
 </script>
 <style scoped lang="scss">
 .chat-container {
