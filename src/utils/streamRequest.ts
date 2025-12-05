@@ -1,8 +1,8 @@
 interface StreamOptions {
-  url: string;
+  url: string | ((...args: any[]) => string);
   data: any;
   onMessage: (chunk: string) => void;
-  onThinking?: (thinking: any) => void; // 新增：处理思考链
+  onThinking?: (thinking: any) => void;
   onDone?: (sessionId?: string) => void;
   onError?: (err: any) => void;
 }
@@ -18,7 +18,9 @@ export async function streamFetch({
   onError
 }: StreamOptions) {
   try {
-    const res = await fetch(url, {
+    const realUrl =
+      typeof url === 'function' ? url(data?.sessionId) : url;
+    const res = await fetch(realUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -54,11 +56,9 @@ export async function streamFetch({
         } else if (obj?.type === 'done') {
           onDone?.(obj.sessionId);
         } else {
-          // 非预期结构，作为原始文本处理
           onMessage(dataStr);
         }
       } catch (e) {
-        // 非 JSON，作为纯文本处理
         onMessage(dataStr);
       }
     };

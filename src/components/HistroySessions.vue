@@ -67,7 +67,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue';
 import { get, post } from '@/utils/request';
-
+import api from '@/utils/api';
 type SessionItem = {
     id: number | string;
     title?: string;
@@ -135,7 +135,7 @@ async function fetchSessions() {
     loading.value = true;
     errorMessage.value = '';
     try {
-        const res: any = await get('http://10.3.20.101:3000/api/ai/sessions');
+        const res: any = await get(api.getSessionList);
         sessions.value = res?.sessions ?? [];
     } catch (err) {
         console.error('获取会话失败', err);
@@ -151,7 +151,7 @@ async function deleteSession() {
     deletingId.value = sessionId;
 
     try {
-        await post(`http://10.3.20.101:3000/api/ai/sessions/${sessionId}/delete`);
+        await post(api.deleteSession(sessionId));
         sessions.value = sessions.value.filter(s => s.id !== sessionId);
         emit('delete-session', sessionId);
     } catch (err) {

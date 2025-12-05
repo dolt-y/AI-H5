@@ -509,10 +509,8 @@ const statusClass = computed(() => props.message.status || 'success');
         :deep(th) {
             background-color: #f5f5f5;
             border: 1px solid #e2e8f0;
-            // padding: 0.1rem;
             font-weight: 500;
             text-align: left;
-            // font-size: 0.6rem;
         }
 
         :deep(td) {

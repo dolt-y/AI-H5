@@ -7,8 +7,6 @@
       <div class="bg-glow-right"></div>
       <div class="bg-noise"></div>
     </div>
-    <!--设置面板-->
-    <!-- <SettingsPanel @update-settings="handleSettingsUpdate" /> -->
     <!--聊天窗口-->
     <div class="chat-body">
       <div class="message-scroll">
@@ -44,32 +42,33 @@
   </div>
 </template>
 <script lang="ts" setup>
+import { ElMessage } from 'element-plus'
 import InputArea from '@/components/InputArea.vue';
 import MessageItem from '@/components/MessageItem.vue';
 import HistroySessions from '@/components/HistroySessions.vue';
-import SettingsPanel from '@/components/SettingsPanel.vue';
 import type { ChatMessage, Session, ModelOption, user, HistoryMessage } from '@/utils/type';
 import { nextTick, onMounted, ref } from 'vue';
 import { get, post } from '@/utils/request';
-import { streamFetch } from '@/utils/streamRequest';
-import { renderMarkdown } from '@/utils/markdown';
+import api from '@/utils/api';
+
+import { useChatScroll } from './hook/useChatScroll';
+import { useChatStream } from './hook/useChatStream';
+const { scrollToBottom, bottomAnchorId } = useChatScroll();
+const { isAssistantTyping, streamAssistantReply } = useChatStream(scrollToBottom);
 
 const messages = ref<ChatMessage[]>([]);// 消息列表
 const messageIdSeed = ref<number>(0);// 消息ID
-const bottomAnchorId = 'chat-bottom-anchor';
-const isAssistantTyping = ref<boolean>(false);// AI正在输入
+const nextMessageId = () => ++messageIdSeed.value;
 
 const isRecording = ref<boolean>(false);// 是否正在录音
 const recordingDuration = ref<number>(0);// 录音时长
 const inputValue = ref<string>('');// 输入框内容
 const conversationStartedAt = ref<number>(Date.now());// 会话开始时间
-const scrollTargetId = ref<string>('');// 滚动目标ID
 const sessionId = ref<number | string>();
 
 const historySessionsVisible = ref<boolean>(false);
 const lastUserMessage = ref<ChatMessage | null>(null);
 
-const assistantMessageContent = ref(''); // 用于流式文本拼接
 
 // 模型选择
 const selectedModel = ref<string>('deepseek-chat');
@@ -84,17 +83,6 @@ const userInfo = ref<user>({
   avatarUrl: ''
 });
 const token = ref<string>();
-
-const handleSettingsUpdate = (settings: any) => {
-  // 处理设置更新
-  if (settings.nickname) {
-    userInfo.value.nickname = settings.nickname;
-  }
-  if (settings.defaultModel) {
-    selectedModel.value = settings.defaultModel;
-  }
-  console.log('设置已更新:', settings);
-};
 
 onMounted(() => {
   token.value = getQueryParam('token');
@@ -117,46 +105,6 @@ const initializeConversation = () => {
 
 initializeConversation();
 
-function nextMessageId(): number {
-  messageIdSeed.value += 1;
-  return messageIdSeed.value;
-}
-/**
- * 
- * @param targetId 定位message-id
- */
-async function scrollToBottom(targetId?: string) {
-  await nextTick();
-  const id = targetId ?? bottomAnchorId;
-  scrollTargetId.value = id;
-
-  // 等两帧渲染，尽量避免 CSS 动画或异步内容（高亮、图片）导致高度变化后滚动位置偏移
-  await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
-  await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
-
-  const element = document.getElementById(id);
-  const chatBody = document.querySelector('.chat-body') as HTMLElement | null;
-
-  // 优先尝试滚动到包含消息的滚动容器，而不是让浏览器选择最近的可滚动祖先
-  if (chatBody) {
-    if (element && chatBody.contains(element)) {
-      // 计算目标元素底部对容器的 scrollTop 值，然后平滑滚动
-      const el = element as HTMLElement;
-      const target = el.offsetTop + el.offsetHeight - chatBody.clientHeight;
-      chatBody.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
-      return;
-    }
-
-    // 如果找不到指定元素，直接滚动到容器底部
-    chatBody.scrollTo({ top: chatBody.scrollHeight, behavior: 'smooth' });
-    return;
-  }
-
-  // 兜底：如果没有找到容器，使用默认的 scrollIntoView
-  if (element) {
-    element.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }
-}
 function createAssistantGreeting(): ChatMessage {
   return {
     id: nextMessageId(),
@@ -192,7 +140,6 @@ async function handleSendMessage(rawContent?: string) {
   lastUserMessage.value = userMessage;
   inputValue.value = '';
   scrollToBottom(`message-${userMessage.id}`);
-  let id = sessionId?.value;
 
   // 更新用户消息状态为成功（消息已发送）
   userMessage.status = 'success';
@@ -201,115 +148,15 @@ async function handleSendMessage(rawContent?: string) {
     messages.value[userIndex] = { ...userMessage };
   }
 
-  await streamAssistantReply(userMessage, content, id);
+  await streamAssistantReply(
+    messages.value,
+    nextMessageId,
+    content,
+    sessionId.value,
+    selectedModel.value
+  );
 }
-/**
- * 
- * @param userMessage 用户发送的消息
- * @param originalText 用户发送的原始文本
- * @param sessionId 会话ID
- */
-function streamAssistantReply(userMessage: ChatMessage, originalText: string, sessionIdValue: string | number | undefined) {
-  isAssistantTyping.value = true;
 
-  const assistantMessage: ChatMessage = {
-    id: nextMessageId(),
-    role: 'assistant',
-    type: 'text',
-    content: '',
-    reasoning_content: '',
-    status: 'pending',
-    timestamp: Date.now(),
-  };
-
-  messages.value.push(assistantMessage);
-  scrollToBottom(`message-${assistantMessage.id}`);
-
-  assistantMessageContent.value = '';
-
-  let renderFrame: number | null = null;
-
-  // 渲染帧优化
-  const scheduleRenderUpdate = () => {
-    if (renderFrame !== null) return;
-    renderFrame = requestAnimationFrame(() => {
-      renderFrame = null;
-      assistantMessage.content = renderMarkdown(assistantMessageContent.value);
-      const index = messages.value.findIndex(m => m.id === assistantMessage.id);
-      if (index !== -1) {
-        messages.value[index] = { ...assistantMessage };
-      }
-    });
-  };
-
-  return new Promise<void>((resolve) => {
-    let hasReceivedFirstChunk = false;
-
-    streamFetch({
-      url: 'http://10.3.20.101:3000/api/ai/chat',
-      data: {
-        messages: [{ role: 'user', content: originalText }],
-        sessionId: sessionIdValue,
-        stream: true,
-        model: selectedModel.value,
-      },
-      onMessage: (chunk: string) => {
-        console.log('流式请求接收到数据:', chunk);
-        const parsedText = chunk;
-        if (!parsedText) return;
-        // 第一条数据到达时，立即更新状态为 success（隐藏 loading icon）
-        if (!hasReceivedFirstChunk) {
-          hasReceivedFirstChunk = true;
-          assistantMessage.status = 'success';
-        }
-        assistantMessageContent.value += parsedText;
-        // 更新消息列表,requestAnimationFrame帧优化
-        assistantMessage.content = assistantMessageContent.value;
-        scheduleRenderUpdate();
-        nextTick(() => {
-          scrollToBottom(`message-${assistantMessage.id}`);
-        });
-      },
-      onThinking: (thinking) => {
-        console.log('思考中数据:', thinking);
-        if (!hasReceivedFirstChunk) {
-          hasReceivedFirstChunk = true;
-          assistantMessage.status = 'success';
-        }
-        assistantMessage.reasoning_content += thinking
-        scheduleRenderUpdate();
-        nextTick(() => {
-          scrollToBottom(`message-${assistantMessage.id}`);
-        });
-      },
-      onDone: (id: string | number | undefined) => {
-        sessionId.value = id;
-        assistantMessage.content = assistantMessageContent.value;
-        assistantMessage.status = 'success';
-
-        const index = messages.value.findIndex(m => m.id === assistantMessage.id);
-        if (index !== -1) {
-          messages.value[index] = { ...assistantMessage };
-        }
-
-        isAssistantTyping.value = false;
-        scrollToBottom(`message-${assistantMessage.id}`);
-        resolve();
-      },
-      onError: (err: any) => {
-        assistantMessage.status = 'error';
-        const index = messages.value.findIndex(m => m.id === assistantMessage.id);
-        if (index !== -1) {
-          messages.value[index] = { ...assistantMessage };
-        }
-        isAssistantTyping.value = false;
-        console.error('流式请求出错:', err);
-
-        resolve();
-      }
-    });
-  });
-}
 // 新建会话
 async function handleNewSession() {
   // 如果正在输入，不允许新建会话
@@ -351,6 +198,7 @@ async function applyHistoryMessages(rawMessages: HistoryMessage[]) {
     scrollToBottom();
   }
 }
+
 // 加载历史会话
 async function handleSelectSession(session: Session) {
   if (!session?.id) {
@@ -362,7 +210,7 @@ async function handleSelectSession(session: Session) {
     return;
   }
   try {
-    const res: any = await get(`http://10.3.20.101:3000/api/ai/sessions/${session.id}/messages`);
+    const res: any = await get(api.selectSession(session.id));
     const historyMessages = Array.isArray(res?.messages) ? res.messages : [];
     applyHistoryMessages(historyMessages);
     sessionId.value = typeof session.id === 'string' ? session.id : Number(session.id);
@@ -371,29 +219,25 @@ async function handleSelectSession(session: Session) {
     console.error('加载历史会话失败', error);
   }
 }
+
 // 处理重新生成
 function handleRegenerate(messageId: number) {
   // 找到该消息和它之前的用户消息
   const assistantMsgIndex = messages.value.findIndex(m => m.id === messageId);
   if (assistantMsgIndex === -1) return;
-
   // 找到之前的用户消息
   const userMsgIndex = assistantMsgIndex - 1;
   if (userMsgIndex < 0 || messages.value[userMsgIndex].role !== 'user') return;
-
   const userMsg = messages.value[userMsgIndex];
-
   // 删除当前助手消息
   messages.value.splice(assistantMsgIndex, 1);
-
-  // 重新生成回复
-  streamAssistantReply(userMsg, userMsg.content, sessionId.value);
+  streamAssistantReply(messages.value, nextMessageId, userMsg.content, sessionId.value, selectedModel.value);
 }
 
 // 处理点赞
 function handleLike(data: { messageId: number; liked: boolean }) {
   console.log('消息点赞:', data);
-  const res: any = post(`http://10.3.20.101:3000/api/ai//messages/${data.messageId}/like`);
+  const res: any = post(api.like(data.messageId));
   console.log('点赞结果:', res);
 }
 
@@ -424,10 +268,12 @@ function handleSettings() {
   // 这里可以添加设置弹窗
 }
 function handelDelete(sessionIdValue: number | string) {
+  ElMessage.success('会话已删除');
   // 如果删除的是当前会话，重置聊天
   if (sessionId.value === sessionIdValue) {
     initializeConversation();
     sessionId.value = undefined;
+    historySessionsVisible.value = false;
   }
 }
 </script>
