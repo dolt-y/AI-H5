@@ -4,7 +4,7 @@
         <button class="settings-btn" @click="togglePanel" :class="{ active: isPanelOpen }" title="设置">
             <img src="@/assets/menu-hamburger.svg" alt="设置菜单" class="menu-icon" />
         </button>
-        
+
         <!-- 半透明覆盖层 -->
         <transition name="fade">
             <div v-if="isPanelOpen" class="settings-overlay" @click="closePanel"></div>

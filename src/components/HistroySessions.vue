@@ -84,7 +84,6 @@ const emit = defineEmits<{
     (e: 'delete-session', sessionId: number | string): void;
 }>();
 const sessions = ref<SessionItem[]>([]);
-const listHeight = ref(0);
 const loading = ref(false);
 const errorMessage = ref('');
 
@@ -167,21 +166,11 @@ function refreshSessions() {
     fetchSessions();
 }
 
-function updateListHeight() {
-    // uni.getSystemInfo({
-    //     success: (info) => {
-    //         // 底部弹窗最大高度为屏幕高度的70%，减去header和handle的高度
-    //         listHeight.value = info.windowHeight * 0.7 - 180;
-    //     }
-    // });
-}
-
 watch(
     () => props.visible,
     (visible) => {
         if (visible) {
             fetchSessions();
-            updateListHeight();
         }
     }
 );
@@ -189,7 +178,6 @@ watch(
 onMounted(() => {
     if (props.visible) {
         fetchSessions();
-        updateListHeight();
     }
 });
 </script>

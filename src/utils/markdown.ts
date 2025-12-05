@@ -2,7 +2,7 @@
 import MarkdownIt from 'markdown-it';
 import hljs from 'highlight.js';
 
-const md = new MarkdownIt({
+const md:any = new MarkdownIt({
   html: true,
   breaks: true,
   linkify: true,

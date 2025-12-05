@@ -1,9 +1,17 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
+import { visualizer } from 'rollup-plugin-visualizer'
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue(),
+  visualizer({
+    open: true,      // 构建后自动打开报告
+    filename: 'dist/report.html', // 输出位置
+    gzipSize: true,  // 显示 gzip 体积
+    brotliSize: true // 显示 brotli 体积
+  })
+  ],
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src')
@@ -16,6 +24,7 @@ export default defineConfig({
   },
   // **添加以下 build 配置**
   build: {
+    cssCodeSplit: true,
     sourcemap: true, // 生产环境禁用 source map
     // 确保使用 terser 进行压缩，这是默认选项，但明确指定更保险
     minify: 'terser',

@@ -118,9 +118,6 @@ const onNewSession = () => {
     emit('new-session');
 }
 
-const onSettings = () => {
-    emit('settings');
-}
 const handleImageUpload = () => {
     if (props.isRecording) return;
 }
