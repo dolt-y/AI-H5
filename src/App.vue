@@ -204,11 +204,13 @@ async function applyHistoryMessages(rawMessages: HistoryMessage[]) {
 // 加载历史会话
 async function handleSelectSession(session: Session) {
   if (!session?.id) {
-    console.warn('无法识别该会话');
+    ElMessage.error('没有找到该会话');
+    // console.warn('无法识别该会话');
     return;
   }
   if (isAssistantTyping.value) {
-    console.warn('AI正在回复，请稍后再切换会话');
+    ElMessage.info('AI正在回复，请稍后再切换会话');
+    // console.warn('AI正在回复，请稍后再切换会话');
     return;
   }
   try {
@@ -218,7 +220,8 @@ async function handleSelectSession(session: Session) {
     sessionId.value = typeof session.id === 'string' ? session.id : Number(session.id);
     historySessionsVisible.value = false;
   } catch (error) {
-    console.error('加载历史会话失败', error);
+    ElMessage.error('加载历史会话失败');
+    // console.error('加载历史会话失败', error);
   }
 }
 

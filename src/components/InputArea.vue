@@ -38,16 +38,10 @@
                 placeholder-style="color: rgba(47,58,102,0.35)" :disabled="isRecording" @focus="onInputFocus"
                 @blur="onInputBlur" maxlength="1000"></textarea>
             <div class="input-actions">
-                <!-- <div class="voice-recording-wrapper" v-if="isRecording">
-                    <div class="recording-indicator">
-                        <div class="recording-dot"></div>
-                        <span class="recording-text">录音中 {{ formatDuration(recordingDuration) }}</span>
-                    </div>
-                </div> -->
                 <div class="icon-btn" @click="toggleRecording" :class="{ active: isRecording }" title="语音输入">
                     <img src="../assets/mic-outline.svg" />
                 </div>
-                <div class="send-btn" @click="handleSend" :class="{ disabled: !canSend }">
+                <div class="send-btn" v-debounce="handleSend" :class="{ disabled: !canSend }">
                     <img src="../assets/send-outline.svg"></img>
                 </div>
             </div>
@@ -102,7 +96,6 @@ const emit = defineEmits([
     'settings'
 ]);
 
-// 监听props变化，同步到本地
 watch(() => props.modelValue, (newVal) => {
     inputContent.value = newVal;
 });
@@ -122,7 +115,7 @@ const handleImageUpload = () => {
     if (props.isRecording) return;
 }
 const canSend = computed(() => inputContent.value.trim().length > 0 && !props.isRecording);
-// 发送消息
+
 function handleSend() {
     if (!canSend.value) return;
 
@@ -135,18 +128,6 @@ function handleSend() {
 // 切换录音状态
 function toggleRecording() {
     emit('stop-recording');
-    // if (props.isRecording) {
-    //     emit('stop-recording');
-    // } else {
-    //     emit('start-recording');
-    // }
-}
-
-// 格式化录音时长
-function formatDuration(seconds: number): string {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
 // 输入框聚焦
@@ -163,7 +144,7 @@ function onInputBlur() {
 const isModelDropdownOpen = ref(false);
 const selectedModelText = computed(() => {
     const model = props.modelOptions.find(m => m.value === props.selectedModel);
-    return model ? model.text : 'GPT-3.5';
+    return model ? model.text : '快速问答';
 });
 
 function toggleModelDropdown() {
@@ -175,7 +156,6 @@ function selectModel(modelValue: string) {
     isModelDropdownOpen.value = false;
 }
 
-// 点击外部关闭下拉菜单
 const handleClickOutside = (e: MouseEvent) => {
     const target = e.target as HTMLElement;
     if (!target.closest('.model-selector')) {

@@ -43,5 +43,4 @@ const formatTime = (timestamp: string | number | Date) => {
     return `${hours}:${minutes}`;
 }
 
-
 export { formatTimeText, formatTime };
