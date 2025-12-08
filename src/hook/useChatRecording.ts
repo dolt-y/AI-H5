@@ -6,9 +6,9 @@ export function useChatRecording() {
     const isRecording = ref<boolean>(false);// 是否正在录音
     const recordingDuration = ref<number>(0);// 录音时长
     const isCancel = ref(false);
-    // 处理录音
+
     let recordingTimer: number | null = null;
-    function handleStartRecording() {
+    function handleStartRecording() { // 开始录音
         if (isRecording.value) return;
         isRecording.value = true;
         recordingDuration.value = 0;
@@ -17,7 +17,7 @@ export function useChatRecording() {
             recordingDuration.value += 1;
         }, 1000);
     }
-    function stopRecording() {
+    function stopRecording() { // 停止录音
         if (!isRecording.value) return;
         if (recordingTimer) {
             clearInterval(recordingTimer);
@@ -28,7 +28,7 @@ export function useChatRecording() {
         isCancel.value = false;
     }
 
-    function handleStopRecording() {
+    function handleStopRecording() { // 取消录音
         isCancel.value = true;
         stopRecording();
     }
