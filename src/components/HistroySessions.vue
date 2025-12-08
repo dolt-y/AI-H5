@@ -33,7 +33,7 @@
                         <div class="session-content">
                             <h3 class="session-title">{{ session.title || '未命名会话' }}</h3>
                             <p class="session-desc">{{ session.summary || '暂无摘要' }}</p>
-                            <span class="session-time">{{ formatTime(session.updated_at) }}</span>
+                            <span class="session-time">{{ formatTimeText(session.updated_at) }}</span>
                         </div>
                         <button class="session-delete" @click.stop="confirmDelete(session)"
                             :disabled="deletingId === session.id">
@@ -68,6 +68,7 @@
 import { ref, watch, onMounted } from 'vue';
 import { get, post } from '@/utils/request';
 import api from '@/utils/api';
+import { formatTimeText } from '@/utils/tools';
 type SessionItem = {
     id: number | string;
     title?: string;
@@ -108,26 +109,6 @@ function handleClose() {
 function selectSession(session: SessionItem) {
     emit('select-session', session);
     handleClose();
-}
-
-function formatTime(time?: string) {
-    if (!time) return '';
-
-    const safeTime = time.replace(/-/g, '/');
-
-    const date = new Date(safeTime);
-    if (isNaN(date.getTime())) return '';
-
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-
-    if (diff < 60000) return '刚刚';
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
-    if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`;
-
-    const pad = (val: number) => String(val).padStart(2, '0');
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 async function fetchSessions() {

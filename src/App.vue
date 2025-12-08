@@ -30,15 +30,17 @@
     </div>
     <!--输入框-->
     <div class="composer-container">
-      <InputArea v-model="inputValue" :is-recording="isRecording" :recording-duration="recordingDuration"
-        :selected-model="selectedModel" :model-options="modelOptions" @send-message="handleSendMessage"
-        @view-history="historySessionsVisible = true" @new-session="handleNewSession"
-        @update:selected-model="selectedModel = $event" @start-recording="handleStartRecording"
-        @stop-recording="handleStopRecording" @settings="handleSettings" />
+      <InputArea v-model="inputValue" :selected-model="selectedModel" :model-options="modelOptions"
+        @send-message="handleSendMessage" @view-history="historySessionsVisible = true" @new-session="handleNewSession"
+        @update:selected-model="selectedModel = $event" @settings="handleSettings"
+        @stop-recording="handleStartRecording" />
     </div>
     <!--历史会话-->
     <HistroySessions :visible="historySessionsVisible" :active-session-id="sessionId"
       @close="historySessionsVisible = false" @delete-session="handelDelete" @select-session="handleSelectSession" />
+    <RecordingIndicator :is-recording="isRecording" :duration="recordingDuration" :is-cancel="isCancel"
+      @cancel="handleStopRecording">
+    </RecordingIndicator>
   </div>
 </template>
 <script lang="ts" setup>
@@ -46,6 +48,7 @@ import { ElMessage } from 'element-plus'
 import InputArea from '@/components/InputArea.vue';
 import MessageItem from '@/components/MessageItem.vue';
 import HistroySessions from '@/components/HistroySessions.vue';
+import RecordingIndicator from './components/RecordingIndicator.vue';
 import type { ChatMessage, Session, ModelOption, user, HistoryMessage } from '@/utils/type';
 import { nextTick, onMounted, ref } from 'vue';
 import { get, post } from '@/utils/request';
@@ -53,22 +56,21 @@ import api from '@/utils/api';
 
 import { useChatScroll } from './hook/useChatScroll';
 import { useChatStream } from './hook/useChatStream';
+import { useChatRecording } from './hook/useChatRecording';
 const { scrollToBottom, bottomAnchorId } = useChatScroll();
 const { isAssistantTyping, streamAssistantReply } = useChatStream(scrollToBottom);
+const { isRecording, recordingDuration, isCancel, handleStartRecording, handleStopRecording } = useChatRecording();
 
 const messages = ref<ChatMessage[]>([]);// 消息列表
 const messageIdSeed = ref<number>(0);// 消息ID
 const nextMessageId = () => ++messageIdSeed.value;
 
-const isRecording = ref<boolean>(false);// 是否正在录音
-const recordingDuration = ref<number>(0);// 录音时长
 const inputValue = ref<string>('');// 输入框内容
 const conversationStartedAt = ref<number>(Date.now());// 会话开始时间
 const sessionId = ref<number | string>();
 
 const historySessionsVisible = ref<boolean>(false);
 const lastUserMessage = ref<ChatMessage | null>(null);
-
 
 // 模型选择
 const selectedModel = ref<string>('deepseek-chat');
@@ -241,26 +243,6 @@ function handleLike(data: { messageId: number; liked: boolean }) {
   console.log('点赞结果:', res);
 }
 
-// 处理录音
-let recordingTimer: number | null = null;
-function handleStartRecording() {
-  isRecording.value = true;
-  recordingDuration.value = 0;
-  recordingTimer = window.setInterval(() => {
-    recordingDuration.value += 1;
-  }, 1000);
-}
-
-function handleStopRecording() {
-  isRecording.value = false;
-  if (recordingTimer) {
-    clearInterval(recordingTimer);
-    recordingTimer = null;
-  }
-  // 这里可以添加语音转文字的API调用
-  // 暂时清空录音时长
-  recordingDuration.value = 0;
-}
 
 // 处理设置
 function handleSettings() {

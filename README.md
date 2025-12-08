@@ -5,64 +5,62 @@
 [![Vite](https://img.shields.io/badge/Vite-6.3.5-green)](https://vitejs.dev/)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](#)
 
-一个现代化的 AI 智能对话应用，基于 Vue 3 + TypeScript，支持流式响应、会话管理、多模型切换，提供优雅的用户体验。
+一个基于 Vue 3 + TypeScript 开发的 AI 对话助手应用，支持流式响应、会话管理和多模型切换。
 
-## ✨ 核心特性
+## ✨ 核心功能
 
-### 🚀 流式数据处理
-- **SSE（Server-Sent Events）流式接收**：实现了完整的流式数据处理机制，在收到第一块数据时立即渲染
-- **分块解析与缓冲**：支持多行 SSE 事件的正确解析，处理不完整的数据块
-- **实时渲染反馈**：使用 `requestAnimationFrame` 优化渲染性能，避免频繁 DOM 更新导致的卡顿
+### � 流式响应
+- 支持 SSE 流式数据接收，实时显示 AI 回复
+- 分块解析与缓冲，处理不完整的数据块
+- 使用 `requestAnimationFrame` 优化渲染性能
 
-### 💬 对话管理
-- **消息追踪系统**：自动生成唯一消息 ID，维护消息状态（pending/success/error）
-- **会话隔离**：支持多会话并行，可创建、切换、管理历史会话
-- **消息快照存储**：保存用户消息与 AI 回复的完整上下文
-
-### 🎨 交互优化
-- **思考中加载动画**：AI 回复延迟时的优雅 UX——流式数据到达时即刻消失
-- **自动滚动定位**：智能滚动到最新消息，支持指定消息定位，避免内容变化导致的滚动位置偏移
-- **消息操作面板**：支持复制、点赞、重新生成等交互功能
+### 💬 会话管理
+- 支持创建、切换、删除历史会话
+- 会话间相互隔离，独立存储上下文
+- 自动保存消息历史，可随时查看
 
 ### 🎯 多模型支持
-- **模型切换器**：支持在对话过程中动态选择不同 AI 模型
-  - **快速问答模式**（deepseek-chat）
-  - **深度思考模式**（deepseek-reasoner）
-- **模型配置灵活性**：易于扩展其他 AI 提供商
+- 提供两种 AI 模型：
+  - 快速问答模型（deepseek-chat）
+  - 深度思考模型（deepseek-reasoner）
+- 可在对话过程中动态切换模型
 
 ### 📝 Markdown 渲染
-- **完整的 Markdown 支持**：包括代码块、表格、列表、引用等
-- **代码高亮**：使用 highlight.js 实现多语言代码着色
-- **HTML 安全渲染**：配置化处理，支持链接自动新窗口打开
+- 支持代码块、表格、列表、引用等 Markdown 语法
+- 代码高亮显示
+- 安全的 HTML 渲染，链接自动在新窗口打开
 
-### 🎨 设计系统
-- **现代渐变设计**：渐变色（紫→紫→粉）贯穿整个应用
-- **响应式布局**：基于 CSS 变量的深浅主题支持
-- **动画细节**：平滑的消息滑入、加载转圈、脉冲效果等
+### 🎨 交互功能
+- AI 回复时显示加载动画
+- 自动滚动到最新消息
+- 消息支持复制、点赞、重新生成
 
 ## 🏗️ 项目结构
 
 ```
-src/
-├── components/              # Vue 组件库
-│   ├── MessageItem.vue      # 单条消息渲染组件（含 Markdown 解析、操作面板）
-│   ├── InputArea.vue        # 输入框及工具栏（含模型选择、录音、新建会话）
-│   ├── HistroySessions.vue  # 历史会话管理弹窗
-│   └── HelloWorld.vue       # 示例组件
-├── utils/
-│   ├── type.ts              # TypeScript 类型定义（ChatMessage、Session 等）
-│   ├── request.ts           # HTTP 请求封装（get/post）
-│   ├── streamRequest.ts     # SSE 流式请求实现
-│   └── markdown.ts          # Markdown 渲染引擎配置
-├── assets/                  # 静态资源
-│   ├── regenerate-icon.svg  # 重新生成按钮图标
-│   ├── copy-icon.svg        # 复制按钮图标
-│   ├── like-icon.svg        # 点赞按钮图标
-│   ├── thinking-icon.svg    # 思考中加载动画
-│   └── logo1.png            # AI 角色头像
-├── App.vue                  # 主应用组件（核心业务逻辑）
-├── main.ts                  # 应用入口
-└── style.scss               # 全局样式与设计系统变量
+├─ src
+│  ├─ App.vue                  # 主应用组件
+│  ├─ assets                   # 静态资源
+│  ├─ components               # 组件目录
+│  │  ├─ HistroySessions.vue   # 历史会话组件
+│  │  ├─ InputArea.vue         # 输入区域组件
+│  │  ├─ MessageItem.vue       # 消息项组件
+│  │  ├─ RecordingIndicator.vue # 录音指示器组件
+│  │  └─ SettingsPanel.vue     # 设置面板组件
+│  ├─ hook                     # 自定义 Hook
+│  │  ├─ useChatRecording.ts   # 聊天录音 Hook
+│  │  ├─ useChatScroll.ts      # 聊天滚动 Hook
+│  │  └─ useChatStream.ts      # 聊天流处理 Hook
+│  ├─ utils                    # 工具函数
+│  │  ├─ api.ts                # API 配置
+│  │  ├─ markdown.ts           # Markdown 处理
+│  │  ├─ request.ts            # 请求封装
+│  │  ├─ streamRequest.ts      # 流式请求处理
+│  │  ├─ tools.ts              # 工具函数
+│  │  └─ type.ts               # 类型定义
+│  ├─ main.ts                  # 应用入口
+│  ├─ style.scss               # 全局样式
+│  └─ vite-env.d.ts            # Vite 类型声明
 ```
 
 ## 🔧 技术栈
@@ -75,8 +73,7 @@ src/
 | Markdown-it | 14.1.0 | Markdown 渲染 |
 | highlight.js | 内置 | 代码高亮 |
 | SCSS | 1.94.2 | 样式预处理 |
-| Element Plus | 2.10.4 | UI 组件库（可选） |
-| socket.io-client | 4.8.1 | WebSocket 支持（预留） |
+| Element Plus | 2.10.4 | UI 组件库 |
 
 ## 📥 快速开始
 
@@ -110,37 +107,21 @@ npm run preview
 ## 🎯 核心业务流程
 
 ### 对话流程
-```
-用户输入 → 发送消息
-    ↓
-创建 User Message (pending)
-显示在消息列表 → 自动滚动到底部
-    ↓
-调用 streamFetch（POST /api/ai/chat）
-Assistant Message 创建 (pending)
-    ↓
-SSE 数据流开始接收
-    ├─ 第一块数据到达 → status 变为 success（思考中 icon 消失）
-    ├─ 持续接收 → 实时渲染 Markdown 内容
-    └─ 滚动到最新消息
-    ↓
-流结束 (onDone) → 最终更新消息状态
-    ↓
-用户可进行操作：复制、点赞、重新生成
-```
+1. 用户输入消息并发送
+2. 创建用户消息并显示
+3. 调用 AI 接口获取流式响应
+4. 创建助手消息，显示加载状态
+5. 接收 SSE 数据流，实时渲染内容
+6. 流结束后更新消息状态
+7. 用户可对消息进行操作（复制、点赞、重新生成）
 
 ### 会话管理流程
-```
-新建会话 → POST /api/ai/sessions
-    ↓
-获取 session.id → 用于后续对话上下文关联
-    ↓
-切换历史会话 → GET /api/ai/sessions/{id}/messages
-    ↓
-加载历史消息 → 等待 DOM 稳定 → 智能滚动到底部
-```
+1. 新建会话
+2. 获取会话 ID，用于后续对话关联
+3. 切换历史会话时加载对应消息
+4. 智能滚动到消息底部
 
-## 🔐 API 接口约定
+## 🔐 API 接口
 
 ### 对话接口
 ```typescript
@@ -172,60 +153,6 @@ Response: { messages: Array<HistoryMessage> }
   }
 ```
 
-## 💡 亮点分析
-
-### 1. **高性能流式渲染**
-- 使用 requestAnimationFrame 进行 Markdown 渲染节流，避免频繁重排/重绘
-- SSE 流数据的分块处理和缓冲机制确保即便数据包不完整也能正确解析
-- 流式更新时的自动滚动采用两帧 rAF 等待，确保 CSS 动画和布局稳定
-
-### 2. **用户体验的细节关怀**
-- **思考中的智能隐藏**：在 AI 流式数据到达时立即消失，而非等到完全响应结束
-- **自动滚动的可靠性**：通过计算 offsetTop + offsetHeight 的方式定位，而非依赖浏览器的 scrollIntoView
-- **消息状态追踪**：pending/success/error 三态设计，清晰反映消息传输状态
-
-### 3. **设计系统的一致性**
-- 全局 CSS 变量支持深浅主题自动切换
-- 渐变色、阴影、圆角等设计元素通过变量统一管理
-- 图标采用 SVG 梯度化设计，视觉风格高度统一
-
-### 4. **类型安全的架构**
-- 完整的 TypeScript 类型定义（ChatMessage、Session、ModelOption 等）
-- 强类型的 API 接口约定，避免运行时错误
-- 编译期静态检查确保重构安全
-
-### 5. **可扩展的会话设计**
-- 多会话隔离，支持并行对话
-- Session ID 与消息绑定，便于后端关联上下文
-- 历史消息的快照存储，支持任意时间点的恢复
-
-## 🎨 设计亮点
-
-### 渐变色系统
-```scss
---color-accent: #6366f1        // 紫
---color-accent-strong: #8b5cf6 // 紫
---color-accent-contrast: #ec4899 // 粉
-```
-贯穿所有交互元素的视觉主线
-
-### 响应式主题
-```scss
-:root {
-  // Light mode
-  --color-bg-primary: #f5f7ff;
-  --color-text-primary: #273156;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    // Dark mode
-    --color-bg-primary: #0f172a;
-    --color-text-primary: #e2e8f0;
-  }
-}
-```
-
 ## 📱 浏览器兼容性
 
 - Chrome 90+
@@ -233,41 +160,34 @@ Response: { messages: Array<HistoryMessage> }
 - Safari 14+
 - Edge 90+
 
-## 🚀 性能指标
+## 🔄 后续开发方向
 
-- 首屏加载时间 < 2s（取决于网络）
-- SSE 流式响应首字节时间 < 2s（取决于 AI 服务）
-- 消息渲染帧率 > 30fps（大文本场景）
+- 完善语音输入功能
+- 支持消息搜索与过滤
+- 实现对话记录导出
+- 添加 PWA 支持
+- 完善用户认证体系
+- 集成更多 AI 模型
 
-## 🔄 后续优化方向
-
-- [ ] 语音输入完整实现（当前预留）
-- [ ] 消息搜索与过滤
-- [ ] 导出对话记录（PDF、Markdown）
-- [ ] 离线消息队列（PWA）
-- [ ] 用户认证与授权体系
-- [ ] 数据加密传输
-- [ ] 更多 AI 模型集成
-
-## 📄 相关文件说明
+## 📄 主要文件说明
 
 | 文件 | 说明 |
 |-----|------|
-| `streamRequest.ts` | SSE 流式数据解析的核心实现，支持多行 data 字段 |
-| `App.vue` | 主业务逻辑，包含对话流程、会话管理、自动滚动优化 |
-| `MessageItem.vue` | 消息渲染与交互，思考中加载动画、Markdown 解析、操作按钮 |
+| `streamRequest.ts` | 流式数据解析核心实现 |
+| `App.vue` | 主业务逻辑，包含对话流程和会话管理 |
+| `MessageItem.vue` | 消息渲染与交互处理 |
 | `InputArea.vue` | 输入框、模型切换、会话操作 |
-| `markdown.ts` | Markdown-it 配置，代码高亮、链接处理 |
-| `style.scss` | 全局设计系统，渐变、主题、动画 |
+| `markdown.ts` | Markdown 渲染配置 |
+| `style.scss` | 全局样式 |
 
-## 🤝 贡献指南
+## 🤝 贡献
 
-欢迎 PR 和 Issue！
+欢迎提交 PR 和 Issue！
 
 ## 📝 许可证
 
 MIT License
 
 ---
-**最后更新**: 2025年12月3日  
+**最后更新**: 2025年12月8日  
 **Repository**: [github.com/dolt-y/AI-H5](https://github.com/dolt-y/AI-H5)

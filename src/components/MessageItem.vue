@@ -71,6 +71,7 @@
 import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import logo from '@/assets/logo.png';
 import "highlight.js/styles/github.css";
+import { formatTime } from '@/utils/tools';
 import { renderMarkdown } from '@/utils/markdown';
 const props = defineProps({
     message: {
@@ -88,23 +89,17 @@ const isReasoningExpanded = ref(true);
 const emit = defineEmits(['preview-image', 'regenerate', 'quote', 'share', 'like']);
 
 function handleCopy() {
-    // 1. 获取文本内容
     const text = document.getElementById(`message-${props.message.id}`)?.querySelector('.message-content')?.textContent;
     if (!text) return;
 
-    // 2. 创建临时输入框
     const textarea = document.createElement('textarea');
     textarea.value = text;
     document.body.appendChild(textarea);
 
-    // 3. 选中并复制
     textarea.select();
     document.execCommand('copy');
-
-    // 4. 清理临时元素
     document.body.removeChild(textarea);
 
-    // 5. 更新成功状态
     if (isCopied) {
         isCopied.value = true;
         setTimeout(() => isCopied.value = false, 1500);
@@ -122,13 +117,6 @@ function handleRegenerate() {
 
 function toggleReasoningContent() {
     isReasoningExpanded.value = !isReasoningExpanded.value;
-}
-
-function formatTime(timestamp: string | number | Date) {
-    const date = new Date(timestamp);
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
 }
 
 function predivImage(imageUrl: any) {

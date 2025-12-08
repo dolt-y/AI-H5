@@ -38,12 +38,12 @@
                 placeholder-style="color: rgba(47,58,102,0.35)" :disabled="isRecording" @focus="onInputFocus"
                 @blur="onInputBlur" maxlength="1000"></textarea>
             <div class="input-actions">
-                <div class="voice-recording-wrapper" v-if="isRecording">
+                <!-- <div class="voice-recording-wrapper" v-if="isRecording">
                     <div class="recording-indicator">
                         <div class="recording-dot"></div>
                         <span class="recording-text">录音中 {{ formatDuration(recordingDuration) }}</span>
                     </div>
-                </div>
+                </div> -->
                 <div class="icon-btn" @click="toggleRecording" :class="{ active: isRecording }" title="语音输入">
                     <img src="../assets/mic-outline.svg" />
                 </div>
@@ -134,11 +134,12 @@ function handleSend() {
 }
 // 切换录音状态
 function toggleRecording() {
-    if (props.isRecording) {
-        emit('stop-recording');
-    } else {
-        emit('start-recording');
-    }
+    emit('stop-recording');
+    // if (props.isRecording) {
+    //     emit('stop-recording');
+    // } else {
+    //     emit('start-recording');
+    // }
 }
 
 // 格式化录音时长
