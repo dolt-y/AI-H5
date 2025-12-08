@@ -48,7 +48,7 @@ import { ElMessage } from 'element-plus'
 import InputArea from '@/components/InputArea.vue';
 import MessageItem from '@/components/MessageItem.vue';
 import HistroySessions from '@/components/HistroySessions.vue';
-import RecordingIndicator from './components/RecordingIndicator.vue';
+import RecordingIndicator from '@/components/RecordingIndicator.vue';
 import type { ChatMessage, Session, ModelOption, user, HistoryMessage } from '@/utils/type';
 import { nextTick, onMounted, ref } from 'vue';
 import { get, post } from '@/utils/request';

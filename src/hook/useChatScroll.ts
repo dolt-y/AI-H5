@@ -18,7 +18,6 @@ export function useChatScroll() {
         const chatBody = document.querySelector(".chat-body") as HTMLElement;
 
         if (!chatBody) return;
-
         if (el && chatBody.contains(el)) {
             // 计算目标元素底部对容器的 scrollTop 值，然后平滑滚动
             const target = el.offsetTop + el.offsetHeight - chatBody.clientHeight;
