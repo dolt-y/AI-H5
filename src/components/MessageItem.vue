@@ -114,11 +114,21 @@ function addCopyButtons() {
         const pres = messageEl.querySelectorAll('pre');
 
         pres.forEach((pre) => {
-            if (pre.querySelector('.copy-code-btn')) return;
+            // if (pre.parentElement?.querySelector('.copy-code-btn')) return;
 
+            const wrapper = document.createElement('div');
+            wrapper.className = 'code-wrapper';
+            wrapper.style.position = 'relative';
+            wrapper.style.overflowX = 'auto';
+            wrapper.style.display = 'block';
+
+            pre.parentNode?.insertBefore(wrapper, pre);
+            wrapper.appendChild(pre);
+            
             const btn = document.createElement('button');
             btn.className = 'copy-code-btn';
             btn.textContent = '复制';
+
             btn.onclick = () => {
                 const code = pre.querySelector('code');
                 if (!code) return;
@@ -127,22 +137,26 @@ function addCopyButtons() {
                 });
             };
 
-            pre.style.position = 'relative';
-            btn.style.position = 'absolute';
-            btn.style.top = '8px';
-            btn.style.right = '8px';
-            btn.style.padding = '2px 6px';
-            btn.style.fontSize = '12px';
-            btn.style.cursor = 'pointer';
-            btn.style.border = 'none';
-            btn.style.borderRadius = '4px';
-            btn.style.background = '#6366f1';
-            btn.style.color = '#fff';
-            btn.style.opacity = '0.7';
+            Object.assign(btn.style, {
+                position: 'absolute',
+                top: '24px',
+                right: '8px',
+                padding: '2px 6px',
+                fontSize: '12px',
+                cursor: 'pointer',
+                border: 'none',
+                borderRadius: '4px',
+                background: '#6366f1',
+                color: '#fff',
+                opacity: '0.7',
+                zIndex: '10',
+                transition: 'opacity 0.2s',
+            });
+
             btn.onmouseenter = () => (btn.style.opacity = '1');
             btn.onmouseleave = () => (btn.style.opacity = '0.7');
 
-            pre.appendChild(btn);
+            wrapper.appendChild(btn);
         });
     });
 }
@@ -453,10 +467,12 @@ watch(() => renderedReasoningHtml.value, () => addCopyButtons());
             background: rgba(16, 185, 129, 0.12);
             color: #059669;
         }
-        &.done{
+
+        &.done {
             background: rgba(16, 185, 129, 0.12);
             color: #059669;
         }
+
         &.error {
             background: rgba(239, 68, 68, 0.12);
             color: #dc2626;
@@ -519,10 +535,9 @@ watch(() => renderedReasoningHtml.value, () => addCopyButtons());
         }
 
         :deep(pre) {
-            // background: #1e293b;
+            position: relative;
             background: black;
             color: #e2e8f0;
-            // padding: 24px;
             padding: 1rem;
             border-radius: 16px;
             overflow: auto;
@@ -537,7 +552,6 @@ watch(() => renderedReasoningHtml.value, () => addCopyButtons());
                 cursor: pointer;
                 border: none;
                 border-radius: 4px;
-                background: red;
                 color: #fff;
                 opacity: 0.7;
                 transition: opacity 0.2s;
