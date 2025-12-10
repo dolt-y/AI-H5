@@ -26,6 +26,7 @@ export default defineConfig({
   build: {
     cssCodeSplit: true,
     sourcemap: true, // 生产环境禁用 source map
+    chunkSizeWarningLimit: 1500,
     minify: 'terser',
     // 配置 terser 压缩选项
     terserOptions: {
@@ -37,5 +38,14 @@ export default defineConfig({
       // keep_classnames: true, 
       // keep_fnames: true
     },
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            return 'vendor'
+          }
+        }
+      }
+    }
   },
 })

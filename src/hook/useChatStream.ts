@@ -82,7 +82,6 @@ export function useChatStream(scrollToBottom: ScrollToBottomFn) {
             if (shouldScroll) {
                 scrollToBottom(`message-${assistantMsg.id}`);
             }
-
             requestAnimationFrame(flushQueue);
         };
 

@@ -1,7 +1,7 @@
 // src/hooks/chat/useChatRecording.ts
 // 语言转文字部分的hook逻辑
 import { ref } from "vue";
-// import NativeRecorder from "@/utils/NativeRecorder";
+import NativeRecorder from "@/utils/NativeRecorder";
 export function useChatRecording() {
 
     const isRecording = ref<boolean>(false);// 是否正在录音
@@ -17,7 +17,7 @@ export function useChatRecording() {
         recordingTimer = setInterval(() => {
             recordingDuration.value += 1;
         }, 1000);
-        // await NativeRecorder.start();
+        await NativeRecorder.start();
     }
     async function stopRecording() { // 停止录音
         if (!isRecording.value) return;
@@ -28,8 +28,8 @@ export function useChatRecording() {
         isRecording.value = false;
         recordingDuration.value = 0;
         isCancel.value = false;
-        // const wavBlob = await NativeRecorder.stop();
-        // console.log("wavBlob:", wavBlob);
+        const wavBlob = await NativeRecorder.stop();
+        console.log("wavBlob:", wavBlob);
     }
 
     function handleStopRecording() { // 取消录音
