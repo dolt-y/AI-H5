@@ -68,11 +68,12 @@
     </div>
 </template>
 <script lang="ts" setup>
-import { ref, computed, watch, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onBeforeUnmount, nextTick } from 'vue';
 import logo from '@/assets/logo.png';
 import "highlight.js/styles/github.css";
 import { formatTime } from '@/utils/tools';
 import { renderMarkdown } from '@/utils/markdown';
+import { ElMessage } from 'element-plus';
 const props = defineProps({
     message: {
         type: Object,
@@ -105,7 +106,46 @@ function handleCopy() {
         setTimeout(() => isCopied.value = false, 1500);
     }
 }
+function addCopyButtons() {
+    nextTick(() => {
+        const messageEl = document.getElementById(`message-${props.message.id}`);
+        if (!messageEl) return;
 
+        const pres = messageEl.querySelectorAll('pre');
+
+        pres.forEach((pre) => {
+            if (pre.querySelector('.copy-code-btn')) return;
+
+            const btn = document.createElement('button');
+            btn.className = 'copy-code-btn';
+            btn.textContent = '复制';
+            btn.onclick = () => {
+                const code = pre.querySelector('code');
+                if (!code) return;
+                navigator.clipboard.writeText(code.textContent || '').then(() => {
+                    ElMessage.success('复制成功');
+                });
+            };
+
+            pre.style.position = 'relative';
+            btn.style.position = 'absolute';
+            btn.style.top = '8px';
+            btn.style.right = '8px';
+            btn.style.padding = '2px 6px';
+            btn.style.fontSize = '12px';
+            btn.style.cursor = 'pointer';
+            btn.style.border = 'none';
+            btn.style.borderRadius = '4px';
+            btn.style.background = '#6366f1';
+            btn.style.color = '#fff';
+            btn.style.opacity = '0.7';
+            btn.onmouseenter = () => (btn.style.opacity = '1');
+            btn.onmouseleave = () => (btn.style.opacity = '0.7');
+
+            pre.appendChild(btn);
+        });
+    });
+}
 function handleLike() {
     isLiked.value = !isLiked.value;
     emit('like', { messageId: props.message.id, liked: isLiked.value });
@@ -183,6 +223,8 @@ onBeforeUnmount(() => {
 const showStatus = computed(() => props.message.role === 'user');
 const statusText = computed(() => getStatusText(props.message.status));
 const statusClass = computed(() => props.message.status || 'success');
+watch(() => renderedHtml.value, () => addCopyButtons());
+watch(() => renderedReasoningHtml.value, () => addCopyButtons());
 </script>
 <style lang="scss" scoped>
 .message-item {
@@ -438,13 +480,13 @@ const statusClass = computed(() => props.message.status || 'success');
         color: inherit;
 
         :deep(h1) {
-            font-size: 2.2rem;
+            font-size: 1.8rem;
             font-weight: 700;
             margin: 24px 0 16px;
         }
 
         :deep(h2) {
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             font-weight: 600;
             margin: 20px 0 12px;
         }
@@ -474,12 +516,33 @@ const statusClass = computed(() => props.message.status || 'success');
         }
 
         :deep(pre) {
-            background: #1e293b;
+            // background: #1e293b;
+            background: black;
             color: #e2e8f0;
-            padding: 24px;
+            // padding: 24px;
+            padding: 1rem;
             border-radius: 16px;
             overflow: auto;
             margin: 16px 0;
+
+            .copy-code-btn {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                padding: 2px 6px;
+                font-size: 12px;
+                cursor: pointer;
+                border: none;
+                border-radius: 4px;
+                background: red;
+                color: #fff;
+                opacity: 0.7;
+                transition: opacity 0.2s;
+
+                &:hover {
+                    opacity: 1;
+                }
+            }
 
             code {
                 background: none;
