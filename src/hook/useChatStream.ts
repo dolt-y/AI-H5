@@ -127,11 +127,12 @@ export function useChatStream(scrollToBottom: ScrollToBottomFn) {
 
                 onDone: () => {
                     // 网络请求结束，等待队列消费完毕
+                    assistantMsg.status = "done";
                     const checkDone = setInterval(() => {
                         if (queue.length === 0) {
                             clearInterval(checkDone);
                             isAssistantTyping.value = false;
-                            assistantMsg.status = "success";
+                            assistantMsg.status = "done";
                             resolve();
                         }
                     }, 50);

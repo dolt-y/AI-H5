@@ -5,6 +5,7 @@ const API_BASE = import.meta.env.VITE_OPENAI_BASE_URL
 export const fixedApi = {
     getSessionList: "/api/ai/sessions",
     chat: "/api/ai/chat",
+    recording:'/api/ai/speech-to-text',
 } as const;
 
 // 动态接口，需传入参数

@@ -4,7 +4,7 @@ interface ChatMessage {
   type: 'text' | 'image';
   content: string;
   reasoning_content?: string;
-  status?: 'pending' | 'success' | 'error';
+  status?: 'pending' | 'success' | 'done' | 'error';
   timestamp: number;
   quoted?: {
     id: number;

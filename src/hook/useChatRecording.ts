@@ -1,41 +1,74 @@
 // src/hooks/chat/useChatRecording.ts
-// 语言转文字部分的hook逻辑
 import { ref } from "vue";
 import NativeRecorder from "@/utils/NativeRecorder";
+import { post } from '@/utils/request';
+import api from "@/utils/api";
 export function useChatRecording() {
-
-    const isRecording = ref<boolean>(false);// 是否正在录音
-    const recordingDuration = ref<number>(0);// 录音时长
+    const isRecording = ref(false);
+    const recordingDuration = ref(0);
     const isCancel = ref(false);
 
     let recordingTimer: number | null = null;
-    async function handleStartRecording() { // 开始录音
+
+    async function handleStartRecording() {
         if (isRecording.value) return;
+
         isRecording.value = true;
         recordingDuration.value = 0;
         isCancel.value = false;
+
         recordingTimer = setInterval(() => {
             recordingDuration.value += 1;
         }, 1000);
+
         await NativeRecorder.start();
     }
-    async function stopRecording() { // 停止录音
+
+    /**
+     * 停止录音 -> 上传后端 -> 返回识别文本
+     */
+    async function stopRecording() {
         if (!isRecording.value) return;
+
         if (recordingTimer) {
             clearInterval(recordingTimer);
             recordingTimer = null;
         }
+
         isRecording.value = false;
         recordingDuration.value = 0;
-        isCancel.value = false;
+
+        // 获取录音文件（Blob）
         const wavBlob = await NativeRecorder.stop();
         console.log("wavBlob:", wavBlob);
+
+        // 如果被取消，不上传
+        // if (isCancel.value) return "";
+
+        // 上传到后端 Whisper API
+        const text = await uploadSpeech(wavBlob);
+        console.log("识别文本:", text);
+        return text;
     }
 
-    function handleStopRecording() { // 取消录音
+    function handleStopRecording() {
         isCancel.value = true;
         stopRecording();
     }
+
+    /**
+     * 上传录音到 Whisper 转文字接口
+     */
+    async function uploadSpeech(wavBlob: Blob | any): Promise<string> {
+        const formData = new FormData();
+
+        formData.append("audio", wavBlob, "audio.wav");
+        const result = await post<any>(api.recording, formData);
+        console.log(result.text);
+
+        return result.text || "";
+    }
+
     return {
         isRecording,
         recordingDuration,

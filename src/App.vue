@@ -113,7 +113,7 @@ function createAssistantGreeting(): ChatMessage {
     role: 'assistant',
     type: 'text',
     content: '你好，我是你的 AI 助手小梦。随时告诉我你的想法，我会帮你整理、发散并给出下一步建议。',
-    status: 'success',
+    status: 'done',
     timestamp: Date.now(),
     quoted: null
   };
@@ -183,7 +183,7 @@ async function applyHistoryMessages(rawMessages: HistoryMessage[]) {
     type: 'text' as const,
     content: item.content,
     reasoning_content: item.reasoning_content,
-    status: 'success' as const,
+    status: 'done' as const,
     timestamp: item.created_at ? new Date(item.created_at).getTime() : Date.now(),
     quoted: null
   }));

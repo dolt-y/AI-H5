@@ -1,34 +1,46 @@
 // request.ts
-type Method = 'GET' | 'POST';
+type Method = "GET" | "POST";
 
 interface RequestOptions {
     method?: Method;
     data?: any;
     params?: Record<string, any>;
 }
-const token = localStorage.getItem('token')
+
+const token = localStorage.getItem("token");
+
 function buildURL(url: string, params?: Record<string, any>) {
     if (!params) return url;
     const query = Object.entries(params)
         .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
-        .join('&');
+        .join("&");
     return query ? `${url}?${query}` : url;
 }
 
 export async function request<T>(url: string, options: RequestOptions = {}): Promise<T> {
-    const { method = 'GET', data, params } = options;
+    const { method = "GET", data, params } = options;
 
     const fullURL = buildURL(url, params);
 
+    const isFormData = data instanceof FormData;
+
+    const headers: Record<string, string> = {
+        "Cache-Control": "no-cache",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+
+    if (!isFormData) {
+        headers["content-type"] = "application/json";
+    }
+
     const res = await fetch(fullURL, {
         method,
-        headers: {
-            'Cache-Control': 'no-cache',
-            'content-type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-
-        },
-        body: method === 'POST' && data ? JSON.stringify(data) : undefined,
+        headers,
+        body: method === "POST"
+            ? isFormData
+                ? data
+                : JSON.stringify(data)
+            : undefined,
     });
 
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -36,6 +48,8 @@ export async function request<T>(url: string, options: RequestOptions = {}): Pro
     return res.json() as Promise<T>;
 }
 
+export const get = <T>(url: string, params?: Record<string, any>) =>
+    request<T>(url, { method: "GET", params });
 
-export const get = <T>(url: string, params?: Record<string, any>) => request<T>(url, { method: 'GET', params });
-export const post = <T>(url: string, data?: any) => request<T>(url, { method: 'POST', data });
+export const post = <T>(url: string, data?: any) =>
+    request<T>(url, { method: "POST", data });

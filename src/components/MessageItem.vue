@@ -45,7 +45,7 @@
             </div>
             <div class="message-footer">
                 <div class="message-actions"
-                    v-if="message.type === 'text' && message.status !== 'pending' && message.role === 'assistant'">
+                    v-if="message.type === 'text' && message.status === 'done' && message.role === 'assistant'">
                     <div class="actions-left">
                         <div class="action-btn copy-btn" @click="handleCopy" :class="{ 'copied': isCopied }" title="复制">
                             <img src="../assets/copy-icon.svg" alt="复制" />
@@ -437,21 +437,41 @@ const statusClass = computed(() => props.message.status || 'success');
         line-height: 1.8;
         color: inherit;
 
-        // :deep(p) {
-        //     margin-bottom: 16px;
+        :deep(h1) {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin: 24px 0 16px;
+        }
 
-        //     &:last-child {
-        //         margin-bottom: 0;
-        //     }
-        // }
+        :deep(h2) {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin: 20px 0 12px;
+        }
 
-        // :deep(code) {
-        //     font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
-        //     background: rgba(0, 0, 0, 0.06);
-        //     padding: 4px 10px;
-        //     border-radius: 8px;
-        //     font-size: 26px;
-        // }
+        :deep(h3) {
+            font-size: 1.4rem;
+            font-weight: 500;
+            margin: 16px 0 8px;
+        }
+
+        :deep(h4) {
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin: 12px 0 6px;
+        }
+
+        :deep(h5) {
+            font-size: 1rem;
+            font-weight: 500;
+            margin: 10px 0 4px;
+        }
+
+        :deep(h6) {
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin: 8px 0 4px;
+        }
 
         :deep(pre) {
             background: #1e293b;
@@ -485,26 +505,42 @@ const statusClass = computed(() => props.message.status || 'success');
             font-style: italic;
         }
 
+        :deep(hr) {
+            border: none;
+            border-top: 1px solid #e2e8f0;
+            margin: 24px 0;
+        }
+
+        :deep(img) {
+            max-width: 100%;
+            display: block;
+            margin: 16px 0;
+            border-radius: 8px;
+        }
+
+        // 链接
         :deep(a) {
             color: #6366f1;
             text-decoration: underline;
+            word-break: break-word;
         }
 
         :deep(table) {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+        }
+
+        :deep(th),
+        :deep(td) {
             border: 1px solid #e2e8f0;
+            padding: 8px 12px;
+            text-align: left;
         }
 
         :deep(th) {
             background-color: #f5f5f5;
-            border: 1px solid #e2e8f0;
-            font-weight: 500;
-            text-align: left;
-        }
-
-        :deep(td) {
-            border: 1px solid #e2e8f0;
-            //    padding: 0.1rem;
-            text-align: left;
+            font-weight: 600;
         }
 
     }
@@ -571,7 +607,8 @@ const statusClass = computed(() => props.message.status || 'success');
         color: var(--color-text-secondary);
 
         :deep(p) {
-            font-size: 0.7rem;
+            font-size: 0.8rem;
+            margin: 1rem;
         }
 
         .markdown-content {
