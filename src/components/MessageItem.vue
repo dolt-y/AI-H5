@@ -453,7 +453,10 @@ watch(() => renderedReasoningHtml.value, () => addCopyButtons());
             background: rgba(16, 185, 129, 0.12);
             color: #059669;
         }
-
+        &.done{
+            background: rgba(16, 185, 129, 0.12);
+            color: #059669;
+        }
         &.error {
             background: rgba(239, 68, 68, 0.12);
             color: #dc2626;
@@ -480,19 +483,19 @@ watch(() => renderedReasoningHtml.value, () => addCopyButtons());
         color: inherit;
 
         :deep(h1) {
-            font-size: 1.8rem;
+            font-size: 1.5rem;
             font-weight: 700;
             margin: 24px 0 16px;
         }
 
         :deep(h2) {
-            font-size: 1.6rem;
+            font-size: 1.4rem;
             font-weight: 600;
             margin: 20px 0 12px;
         }
 
         :deep(h3) {
-            font-size: 1.4rem;
+            font-size: 1.3rem;
             font-weight: 500;
             margin: 16px 0 8px;
         }
@@ -510,7 +513,7 @@ watch(() => renderedReasoningHtml.value, () => addCopyButtons());
         }
 
         :deep(h6) {
-            font-size: 0.9rem;
+            font-size: 1rem;
             font-weight: 500;
             margin: 8px 0 4px;
         }
@@ -563,9 +566,11 @@ watch(() => renderedReasoningHtml.value, () => addCopyButtons());
         :deep(blockquote) {
             border-left: 4px solid rgba(99, 102, 241, 0.5);
             padding-left: 20px;
-            color: rgba(0, 0, 0, 0.6);
             margin: 16px 0;
+            color: rgba(0, 0, 0, 0.7);
             font-style: italic;
+            background: rgba(99, 102, 241, 0.05);
+            border-radius: 4px;
         }
 
         :deep(hr) {
