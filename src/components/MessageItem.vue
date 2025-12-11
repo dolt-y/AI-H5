@@ -66,6 +66,7 @@
             </div>
         </div>
     </div>
+    <iframeDialog v-model:visible="previewDialogVisible" :content="previewContent" />
 </template>
 <script lang="ts" setup>
 import { ref, computed, watch, onBeforeUnmount, nextTick } from 'vue';
@@ -74,6 +75,7 @@ import "highlight.js/styles/github.css";
 import { formatTime } from '@/utils/tools';
 import { renderMarkdown } from '@/utils/markdown';
 import { ElMessage } from 'element-plus';
+import IframeDialog from './iframeDialog.vue';
 const props = defineProps({
     message: {
         type: Object,
@@ -87,6 +89,10 @@ const props = defineProps({
 const isCopied = ref(false);
 const isLiked = ref(false);
 const isReasoningExpanded = ref(true);
+
+const previewDialogVisible = ref(false);
+const previewContent = ref('');
+
 const emit = defineEmits(['preview-image', 'regenerate', 'quote', 'share', 'like']);
 
 function handleCopy() {
@@ -106,7 +112,7 @@ function handleCopy() {
         setTimeout(() => isCopied.value = false, 1500);
     }
 }
-function addCopyButtons() {
+function addCodeButtons() {
     nextTick(() => {
         const messageEl = document.getElementById(`message-${props.message.id}`);
         if (!messageEl) return;
@@ -116,6 +122,7 @@ function addCopyButtons() {
         pres.forEach((pre) => {
             // if (pre.parentElement?.querySelector('.copy-code-btn')) return;
 
+            // 包裹 pre
             const wrapper = document.createElement('div');
             wrapper.className = 'code-wrapper';
             wrapper.style.position = 'relative';
@@ -124,23 +131,25 @@ function addCopyButtons() {
 
             pre.parentNode?.insertBefore(wrapper, pre);
             wrapper.appendChild(pre);
-            
-            const btn = document.createElement('button');
-            btn.className = 'copy-code-btn';
-            btn.textContent = '复制';
 
-            btn.onclick = () => {
-                const code = pre.querySelector('code');
-                if (!code) return;
-                navigator.clipboard.writeText(code.textContent || '').then(() => {
+            const codeEl = pre.querySelector('code');
+            // const isHTML = codeEl?.className.includes('language-html');
+            const isHTML = true;
+
+            // 复制按钮
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-code-btn';
+            copyBtn.textContent = '复制';
+            copyBtn.onclick = () => {
+                if (!codeEl) return;
+                navigator.clipboard.writeText(codeEl.textContent || '').then(() => {
                     ElMessage.success('复制成功');
                 });
             };
-
-            Object.assign(btn.style, {
+            Object.assign(copyBtn.style, {
                 position: 'absolute',
                 top: '24px',
-                right: '8px',
+                right: isHTML ? '60px' : '8px',
                 padding: '2px 6px',
                 fontSize: '12px',
                 cursor: 'pointer',
@@ -152,11 +161,44 @@ function addCopyButtons() {
                 zIndex: '10',
                 transition: 'opacity 0.2s',
             });
+            copyBtn.onmouseenter = () => (copyBtn.style.opacity = '1');
+            copyBtn.onmouseleave = () => (copyBtn.style.opacity = '0.7');
+            wrapper.appendChild(copyBtn);
 
-            btn.onmouseenter = () => (btn.style.opacity = '1');
-            btn.onmouseleave = () => (btn.style.opacity = '0.7');
+            if (isHTML) {
+                const previewBtn = document.createElement('button');
+                previewBtn.className = 'preview-code-btn';
+                previewBtn.textContent = '预览';
+                previewBtn.onclick = () => {
+                    console.log('preview');
+                    if (!codeEl) return;
+                    console.log(codeEl.textContent);
+                    previewContent.value = codeEl.textContent || '';
+                    previewDialogVisible.value = true;
+                };
 
-            wrapper.appendChild(btn);
+                Object.assign(previewBtn.style, {
+                    position: 'absolute',
+                    top: '24px',
+                    right: '8px',
+                    padding: '2px 6px',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    border: 'none',
+                    borderRadius: '4px',
+                    background: '#10b981',
+                    color: '#fff',
+                    opacity: '0.7',
+                    zIndex: '10',
+                    transition: 'opacity 0.2s',
+                });
+
+                previewBtn.onmouseenter = () => (previewBtn.style.opacity = '1');
+                previewBtn.onmouseleave = () => (previewBtn.style.opacity = '0.7');
+
+                wrapper.appendChild(previewBtn);
+            }
+
         });
     });
 }
@@ -237,8 +279,8 @@ onBeforeUnmount(() => {
 const showStatus = computed(() => props.message.role === 'user');
 const statusText = computed(() => getStatusText(props.message.status));
 const statusClass = computed(() => props.message.status || 'success');
-watch(() => renderedHtml.value, () => addCopyButtons());
-watch(() => renderedReasoningHtml.value, () => addCopyButtons());
+watch(() => renderedHtml.value, () => addCodeButtons());
+watch(() => renderedReasoningHtml.value, () => addCodeButtons());
 </script>
 <style lang="scss" scoped>
 .message-item {
