@@ -19,7 +19,7 @@ export default defineConfig({
   },
   server: {
     // host: '0.0.0.0',
-    // host:'10.3.20.101',
+    host:'10.3.20.101',
     port: 5173,
   },
   // **添加以下 build 配置**
