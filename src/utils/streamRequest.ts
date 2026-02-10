@@ -7,7 +7,7 @@ interface StreamOptions {
   onError?: (err: any) => void;
 }
 
-const token = localStorage.getItem('token');
+const getToken = () => localStorage.getItem('token') || '';
 
 export async function streamFetch({
   url,
@@ -20,6 +20,7 @@ export async function streamFetch({
   try {
     const realUrl =
       typeof url === 'function' ? url(data?.sessionId) : url;
+    const token = getToken();
     const res = await fetch(realUrl, {
       method: 'POST',
       headers: {

@@ -17,6 +17,16 @@
     "sass": "^1.94.2",
     "vue": "^3.5.13"
   },
+  "keywords": [
+    "vue3",
+    "element-plus",
+    "markdown-it",
+    "recordrtc",
+    "vite",
+    "typescript"
+  ],
+  "author": "wen.yao",
+  "license": "MIT",
   "devDependencies": {
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^24.10.1",

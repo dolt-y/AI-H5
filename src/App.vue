@@ -85,17 +85,59 @@ const userInfo = ref<user>({
   avatarUrl: ''
 });
 const token = ref<string>();
+const H5_LOGIN_PAYLOAD = {
+  username: 'h5_test',
+  password: 'pass123'
+};
+type H5LoginResponse = {
+  token?: string;
+  access_token?: string;
+  data?: {
+    token?: string;
+    access_token?: string;
+    user?: Partial<user>;
+  };
+  user?: Partial<user>;
+};
 
-onMounted(() => {
-  token.value = getQueryParam('token');
-  localStorage.setItem('token', token.value);
-  userInfo.value.nickname = getQueryParam('nickname');
-  userInfo.value.avatarUrl = getQueryParam('avatarUrl');
+onMounted(async () => {
+  const tokenFromQuery = getQueryParam('token');
+  const nicknameFromQuery = getQueryParam('nickname');
+  const avatarFromQuery = getQueryParam('avatarUrl');
+
+  if (nicknameFromQuery) {
+    userInfo.value.nickname = nicknameFromQuery;
+  }
+  if (avatarFromQuery) {
+    userInfo.value.avatarUrl = avatarFromQuery;
+  }
+
+  if (tokenFromQuery) {
+    token.value = tokenFromQuery;
+    localStorage.setItem('token', tokenFromQuery);
+    return;
+  }
+
+  await loginFromH5();
 })
 // 获取 URL 参数
 function getQueryParam(name: string) {
   const params = new URLSearchParams(window.location.search);
   return params.get(name) || '';
+}
+async function loginFromH5() {
+  try {
+    const res = await post<H5LoginResponse>(api.h5Login, H5_LOGIN_PAYLOAD);
+    const loginToken = res?.token
+    if (!loginToken) {
+      ElMessage.error('H5登录失败，未获取到token');
+      return;
+    }
+    token.value = loginToken;
+    localStorage.setItem('token', loginToken);
+  } catch (error) {
+    ElMessage.error('H5登录失败');
+  }
 }
 // 初始化会话
 const initializeConversation = () => {
@@ -205,12 +247,10 @@ async function applyHistoryMessages(rawMessages: HistoryMessage[]) {
 async function handleSelectSession(session: Session) {
   if (!session?.id) {
     ElMessage.error('没有找到该会话');
-    // console.warn('无法识别该会话');
     return;
   }
   if (isAssistantTyping.value) {
     ElMessage.info('AI正在回复，请稍后再切换会话');
-    // console.warn('AI正在回复，请稍后再切换会话');
     return;
   }
   try {
@@ -221,16 +261,13 @@ async function handleSelectSession(session: Session) {
     historySessionsVisible.value = false;
   } catch (error) {
     ElMessage.error('加载历史会话失败');
-    // console.error('加载历史会话失败', error);
   }
 }
 
 // 处理重新生成
 function handleRegenerate(messageId: number) {
-  // 找到该消息和它之前的用户消息
   const assistantMsgIndex = messages.value.findIndex(m => m.id === messageId);
   if (assistantMsgIndex === -1) return;
-  // 找到之前的用户消息
   const userMsgIndex = assistantMsgIndex - 1;
   if (userMsgIndex < 0 || messages.value[userMsgIndex].role !== 'user') return;
   const userMsg = messages.value[userMsgIndex];
@@ -313,7 +350,6 @@ function handelDelete(sessionIdValue: number | string) {
 
   .chat-body {
     height: 70vh;
-    // width: 30rem;
     width: 95vw;
     overflow-y: auto;
     z-index: 1;

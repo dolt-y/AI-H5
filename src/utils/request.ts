@@ -7,7 +7,7 @@ interface RequestOptions {
     params?: Record<string, any>;
 }
 
-const token = localStorage.getItem("token");
+const getToken = () => localStorage.getItem("token") || "";
 
 function buildURL(url: string, params?: Record<string, any>) {
     if (!params) return url;
@@ -24,6 +24,7 @@ export async function request<T>(url: string, options: RequestOptions = {}): Pro
 
     const isFormData = data instanceof FormData;
 
+    const token = getToken();
     const headers: Record<string, string> = {
         "Cache-Control": "no-cache",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

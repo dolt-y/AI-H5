@@ -1,6 +1,6 @@
 import { nextTick } from "vue";
 export type ScrollToBottomFn = (targetId?: string) => Promise<void>;
-export function useChatScroll() {
+export function useChatScroll(): { scrollToBottom: ScrollToBottomFn; bottomAnchorId: string } {
     const bottomAnchorId = "chat-bottom-anchor";
 
     async function scrollToBottom() {
