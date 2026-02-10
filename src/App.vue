@@ -44,260 +44,36 @@
   </div>
 </template>
 <script lang="ts" setup>
-import { ElMessage } from 'element-plus'
 import InputArea from '@/components/InputArea.vue';
 import MessageItem from '@/components/MessageItem.vue';
 import HistroySessions from '@/components/HistroySessions.vue';
 import RecordingIndicator from '@/components/RecordingIndicator.vue';
-import type { ChatMessage, Session, ModelOption, user, HistoryMessage } from '@/utils/type';
-import { nextTick, onMounted, ref } from 'vue';
-import { get, post } from '@/utils/request';
-import api from '@/utils/api';
-
-import { useChatScroll } from './hook/useChatScroll';
-import { useChatStream } from './hook/useChatStream';
 import { useChatRecording } from './hook/useChatRecording';
-const { scrollToBottom, bottomAnchorId } = useChatScroll();
-const { isAssistantTyping, streamAssistantReply } = useChatStream(scrollToBottom);
-const { isRecording, recordingDuration, isCancel, handleStartRecording, handleStopRecording } = useChatRecording();
+import { useChatConversation } from './hook/useChatConversation';
+import { useChatAuth } from './hook/useChatAuth';
 
-const messages = ref<ChatMessage[]>([]);// 消息列表
-const messageIdSeed = ref<number>(0);// 消息ID
-const nextMessageId = () => ++messageIdSeed.value;
-
-const inputValue = ref<string>('');// 输入框内容
-const conversationStartedAt = ref<number>(Date.now());// 会话开始时间
-const sessionId = ref<number | string>();
-
-const historySessionsVisible = ref<boolean>(false);
-const lastUserMessage = ref<ChatMessage | null>(null);
-
-// 模型选择
-const selectedModel = ref<string>('deepseek-chat');
-const modelOptions = ref<ModelOption[]>([
-  { value: "deepseek-chat", text: "快速问答" },
-  { value: 'deepseek-reasoner', text: "深度思考" }
-]);
-
-const userInfo = ref<user>({
-  openid: '',
-  nickname: '',
-  avatarUrl: ''
+const { userInfo } = useChatAuth();
+const {
+  messages,
+  inputValue,
+  selectedModel,
+  modelOptions,
+  sessionId,
+  historySessionsVisible,
+  bottomAnchorId,
+  handleSendMessage,
+  handleNewSession,
+  handleSelectSession,
+  handleRegenerate,
+  handleLike,
+  handleSettings,
+  handelDelete
+} = useChatConversation();
+const { isRecording, recordingDuration, isCancel, handleStartRecording, handleStopRecording } = useChatRecording({
+  onRecognized: (text) => {
+    inputValue.value = inputValue.value ? `${inputValue.value}${text}` : text;
+  }
 });
-const token = ref<string>();
-const H5_LOGIN_PAYLOAD = {
-  username: 'h5_test',
-  password: 'pass123'
-};
-type H5LoginResponse = {
-  token?: string;
-  access_token?: string;
-  data?: {
-    token?: string;
-    access_token?: string;
-    user?: Partial<user>;
-  };
-  user?: Partial<user>;
-};
-
-onMounted(async () => {
-  const tokenFromQuery = getQueryParam('token');
-  const nicknameFromQuery = getQueryParam('nickname');
-  const avatarFromQuery = getQueryParam('avatarUrl');
-
-  if (nicknameFromQuery) {
-    userInfo.value.nickname = nicknameFromQuery;
-  }
-  if (avatarFromQuery) {
-    userInfo.value.avatarUrl = avatarFromQuery;
-  }
-
-  if (tokenFromQuery) {
-    token.value = tokenFromQuery;
-    localStorage.setItem('token', tokenFromQuery);
-    return;
-  }
-
-  await loginFromH5();
-})
-// 获取 URL 参数
-function getQueryParam(name: string) {
-  const params = new URLSearchParams(window.location.search);
-  return params.get(name) || '';
-}
-async function loginFromH5() {
-  try {
-    const res = await post<H5LoginResponse>(api.h5Login, H5_LOGIN_PAYLOAD);
-    const loginToken = res?.token
-    if (!loginToken) {
-      ElMessage.error('H5登录失败，未获取到token');
-      return;
-    }
-    token.value = loginToken;
-    localStorage.setItem('token', loginToken);
-  } catch (error) {
-    ElMessage.error('H5登录失败');
-  }
-}
-// 初始化会话
-const initializeConversation = () => {
-  messageIdSeed.value = 0;
-  conversationStartedAt.value = Date.now();
-  messages.value = [createAssistantGreeting()];
-  scrollToBottom();
-};
-
-initializeConversation();
-
-function createAssistantGreeting(): ChatMessage {
-  return {
-    id: nextMessageId(),
-    role: 'assistant',
-    type: 'text',
-    content: '你好，我是你的 AI 助手小梦。随时告诉我你的想法，我会帮你整理、发散并给出下一步建议。',
-    status: 'done',
-    timestamp: Date.now(),
-    quoted: null
-  };
-}
-// 发送消息
-async function handleSendMessage(rawContent?: string) {
-  const content = (rawContent ?? inputValue.value).trim();
-  if (!content) {
-    return;
-  }
-  if (isAssistantTyping.value) {
-    return;
-  }
-
-  const userMessage: ChatMessage = {
-    id: nextMessageId(),
-    role: 'user',
-    type: 'text',
-    content,
-    status: 'pending',
-    timestamp: Date.now(),
-    quoted: null
-  };
-
-  messages.value.push(userMessage);
-  lastUserMessage.value = userMessage;
-  inputValue.value = '';
-  scrollToBottom(`message-${userMessage.id}`);
-
-  // 更新用户消息状态为成功（消息已发送）
-  userMessage.status = 'success';
-  const userIndex = messages.value.findIndex(m => m.id === userMessage.id);
-  if (userIndex !== -1) {
-    messages.value[userIndex] = { ...userMessage };
-  }
-
-  await streamAssistantReply(
-    messages.value,
-    nextMessageId,
-    content,
-    sessionId.value,
-    selectedModel.value
-  );
-}
-
-// 新建会话
-async function handleNewSession() {
-  // 如果正在输入，不允许新建会话
-  if (isAssistantTyping.value) {
-    return;
-  }
-  sessionId.value = undefined;
-  initializeConversation();
-}
-
-// 选择历史会话
-async function applyHistoryMessages(rawMessages: HistoryMessage[]) {
-  if (!rawMessages.length) {
-    initializeConversation();
-    return;
-  }
-
-  messageIdSeed.value = 0;
-  const parsedMessages = rawMessages.map((item) => ({
-    id: nextMessageId(),
-    role: item.role,
-    type: 'text' as const,
-    content: item.content,
-    reasoning_content: item.reasoning_content,
-    status: 'done' as const,
-    timestamp: item.created_at ? new Date(item.created_at).getTime() : Date.now(),
-    quoted: null
-  }));
-
-  messages.value = [...parsedMessages];
-  console.log(messages.value);
-  await nextTick();
-  await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
-  await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
-  const chatBody = document.querySelector('.chat-body') as HTMLElement | null;
-  if (chatBody) {
-    chatBody.scrollTop = chatBody.scrollHeight;
-  } else {
-    scrollToBottom();
-  }
-}
-
-// 加载历史会话
-async function handleSelectSession(session: Session) {
-  if (!session?.id) {
-    ElMessage.error('没有找到该会话');
-    return;
-  }
-  if (isAssistantTyping.value) {
-    ElMessage.info('AI正在回复，请稍后再切换会话');
-    return;
-  }
-  try {
-    const res: any = await get(api.selectSession(session.id));
-    const historyMessages = Array.isArray(res?.messages) ? res.messages : [];
-    applyHistoryMessages(historyMessages);
-    sessionId.value = typeof session.id === 'string' ? session.id : Number(session.id);
-    historySessionsVisible.value = false;
-  } catch (error) {
-    ElMessage.error('加载历史会话失败');
-  }
-}
-
-// 处理重新生成
-function handleRegenerate(messageId: number) {
-  const assistantMsgIndex = messages.value.findIndex(m => m.id === messageId);
-  if (assistantMsgIndex === -1) return;
-  const userMsgIndex = assistantMsgIndex - 1;
-  if (userMsgIndex < 0 || messages.value[userMsgIndex].role !== 'user') return;
-  const userMsg = messages.value[userMsgIndex];
-  // 删除当前助手消息
-  messages.value.splice(assistantMsgIndex, 1);
-  streamAssistantReply(messages.value, nextMessageId, userMsg.content, sessionId.value, selectedModel.value);
-}
-
-// 处理点赞
-function handleLike(data: { messageId: number; liked: boolean }) {
-  console.log('消息点赞:', data);
-  const res: any = post(api.like(data.messageId));
-  console.log('点赞结果:', res);
-}
-
-
-// 处理设置
-function handleSettings() {
-  console.log('打开设置');
-  // 这里可以添加设置弹窗
-}
-function handelDelete(sessionIdValue: number | string) {
-  ElMessage.success('会话已删除');
-  // 如果删除的是当前会话，重置聊天
-  if (sessionId.value === sessionIdValue) {
-    initializeConversation();
-    sessionId.value = undefined;
-    historySessionsVisible.value = false;
-  }
-}
 </script>
 <style scoped lang="scss">
 .chat-container {

@@ -87,7 +87,6 @@ const emit = defineEmits([
     'send-message',
     'upload-image',
     'toggle-voice',
-    'start-recording',
     'stop-recording',
     'handle-recording-move',
     'viewHistory',
@@ -125,7 +124,6 @@ function handleSend() {
         inputContent.value = '';
     }
 }
-// 切换录音状态
 function toggleRecording() {
     emit('stop-recording');
 }

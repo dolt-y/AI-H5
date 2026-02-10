@@ -3,7 +3,12 @@ import { ref } from "vue";
 import NativeRecorder from "@/utils/NativeRecorder";
 import { post } from '@/utils/request';
 import api from "@/utils/api";
-export function useChatRecording() {
+
+type RecordingOptions = {
+    onRecognized?: (text: string) => void;
+};
+
+export function useChatRecording(options: RecordingOptions = {}) {
     const isRecording = ref(false);
     const recordingDuration = ref(0);
     const isCancel = ref(false);
@@ -21,7 +26,17 @@ export function useChatRecording() {
             recordingDuration.value += 1;
         }, 1000);
 
-        await NativeRecorder.start();
+        try {
+            await NativeRecorder.start();
+        } catch (error) {
+            if (recordingTimer) {
+                clearInterval(recordingTimer);
+                recordingTimer = null;
+            }
+            isRecording.value = false;
+            recordingDuration.value = 0;
+            return;
+        }
     }
 
     /**
@@ -48,6 +63,9 @@ export function useChatRecording() {
         // 上传到后端 Whisper API
         const text = await uploadSpeech(wavBlob);
         console.log("识别文本:", text);
+        if (text) {
+            options.onRecognized?.(text);
+        }
         return text;
     }
 
