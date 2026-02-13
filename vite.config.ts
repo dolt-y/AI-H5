@@ -28,7 +28,6 @@ export default defineConfig({
     sourcemap: true, // 生产环境禁用 source map
     chunkSizeWarningLimit: 1500,
     minify: 'terser',
-    // 配置 terser 压缩选项
     terserOptions: {
       compress: {
         drop_console: true,// 生产环境时移除所有 console.* 语句

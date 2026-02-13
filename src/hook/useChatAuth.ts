@@ -6,7 +6,11 @@ import type { user } from '@/utils/type';
 
 const H5_LOGIN_PAYLOAD = {
   username: 'h5_test',
-  password: 'pass123'
+  password: 'pass123',
+  userInfo: {
+    nickName: 'H5测试用户',
+    avatarUrl: 'https://p26-passport.byteacctimg.com/img/user-avatar/a51222aa16ff2a7bb4896370ae09ea47~90x90.awebp'
+  }
 };
 
 type H5LoginResponse = {
@@ -58,13 +62,8 @@ export function useChatAuth() {
       }
       token.value = loginToken;
       localStorage.setItem('token', loginToken);
-      const loginUser = res?.user || res?.data?.user;
-      if (loginUser?.nickname) {
-        userInfo.value.nickname = loginUser.nickname;
-      }
-      if (loginUser?.avatarUrl) {
-        userInfo.value.avatarUrl = loginUser.avatarUrl;
-      }
+      userInfo.value.nickname=H5_LOGIN_PAYLOAD.userInfo.nickName;
+      userInfo.value.avatarUrl=H5_LOGIN_PAYLOAD.userInfo.avatarUrl;
     } catch (error) {
       ElMessage.error('H5登录失败');
     }
